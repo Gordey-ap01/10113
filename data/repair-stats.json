@@ -1,0 +1,20 @@
+{
+  "baselineDate": "2026-08-03",
+  "timezone": "Asia/Vladivostok",
+  "total": {
+    "value": 8545,
+    "dailyAverage": 3.344
+  },
+  "phonesAndTablets": {
+    "value": 6527,
+    "dailyAverage": 2.555
+  },
+  "computersAndLaptops": {
+    "value": 1185,
+    "dailyAverage": 1.481
+  },
+  "consoles": {
+    "value": 202,
+    "dailyAverage": 0.253
+  }
+}
