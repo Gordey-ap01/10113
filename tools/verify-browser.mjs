@@ -60,7 +60,7 @@ try {
   await expect(cdp, "header logo", "document.querySelector('.brand__logo')?.naturalWidth >= 246 && document.querySelector('.brand__logo').getBoundingClientRect().width >= 228");
   await expect(cdp, "header call action", "document.querySelector('.site-header .header-call')?.textContent.trim() === 'Позвонить' && document.querySelector('.site-header .header-call')?.getAttribute('href') === 'tel:+79940760101'");
   await expect(cdp, "desktop header phone removed", "document.querySelectorAll('.site-header .header-actions > a').length === 2 && [...document.querySelectorAll('.site-header .header-actions > a')].every((link) => !link.textContent.includes('+7 (994)'))");
-  await expect(cdp, "desktop business action emphasized", "document.querySelector('.header-b2b').getBoundingClientRect().height >= 48 && Number.parseFloat(getComputedStyle(document.querySelector('.header-b2b')).fontSize) >= 16 && getComputedStyle(document.querySelector('.header-b2b')).backgroundColor !== 'rgba(255, 255, 255, 0.16)'");
+  await expect(cdp, "desktop business action white and oval", "document.querySelector('.header-b2b').getBoundingClientRect().height >= 48 && Number.parseFloat(getComputedStyle(document.querySelector('.header-b2b')).fontSize) >= 16 && getComputedStyle(document.querySelector('.header-b2b')).backgroundColor === 'rgb(255, 255, 255)' && Number.parseFloat(getComputedStyle(document.querySelector('.header-b2b')).borderRadius) >= 24");
   await expect(cdp, "service age removed from logo", "document.querySelector('.brand__since') === null && document.querySelector('.brand__city') === null");
   await expect(cdp, "site favicons", "document.querySelector('link[rel=\"icon\"][sizes=\"32x32\"]') !== null && document.querySelector('link[rel=\"apple-touch-icon\"]') !== null");
   await expect(
@@ -205,9 +205,10 @@ try {
   await expect(cdp, "revival counter copy", "document.querySelector('.repair-stage__counter')?.textContent.includes('Устройств отремонтировано') && document.querySelector('.repair-stage__counter')?.textContent.includes('счёт продолжает расти')");
   await expect(cdp, "hero action strip", "document.querySelectorAll('.hero-action-bar .hero__actions .btn').length === 3 && document.querySelectorAll('.hero-action-bar .hero-trust span').length === 3");
   await expect(cdp, "hero trust copy", "[...document.querySelectorAll('.hero-trust span')].map((item) => item.textContent.replace(/\\s+/g, ' ').trim()).join('|').includes('2-3 часа типовой ремонт|до 12 мес гарантия|с 2016 г работаем для Вас')");
+  await expect(cdp, "hero contact action", "document.querySelector('.hero-action-bar__secondary')?.getAttribute('href') === '#contacts' && !document.querySelector('.hero-action-bar__secondary')?.hasAttribute('data-open-booking')");
   await expect(cdp, "hero onsite action", "document.querySelector('.hero-action-bar__onsite')?.getAttribute('href') === '#onsite-service' && document.querySelector('.hero-action-bar__onsite')?.textContent.includes('Заказать выезд мастера')");
   await expect(cdp, "onsite follows specialization", "document.querySelector('#specialization').nextElementSibling?.id === 'onsite-service'");
-  await expect(cdp, "reviews follow onsite", "document.querySelector('#onsite-service').nextElementSibling?.id === 'reviews'");
+  await expect(cdp, "reviews precede contact form", "document.querySelector('#contacts').previousElementSibling?.id === 'reviews' && document.querySelector('#reviews').nextElementSibling?.id === 'contacts'");
   await expect(cdp, "onsite section content", "document.querySelectorAll('.onsite-steps li').length === 3 && document.querySelectorAll('.onsite-scope span').length === 4");
   await expect(cdp, "onsite image source", "document.querySelector('.onsite-media img')?.getAttribute('src')?.endsWith('onsite-master.webp')");
   await expect(cdp, "onsite form", "document.querySelector('.onsite-form')?.action.includes('shineteatr@gmail.com') && document.querySelector('.onsite-form [name=\"Адрес\"]') !== null && document.querySelector('.onsite-form [name=\"Устройство\"]') !== null && document.querySelector('.onsite-form [name=\"_template\"]')?.value === 'table'");
