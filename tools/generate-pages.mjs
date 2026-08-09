@@ -256,7 +256,7 @@ function homeBody() {
     <div class="container hero-action-bar__inner">
       <div class="hero__actions">
         <a class="btn hero-action-bar__primary" href="#specialization">Выбрать ремонт</a>
-        <a class="btn hero-action-bar__secondary" href="#" data-open-booking>Записаться</a>
+        <a class="btn hero-action-bar__secondary" href="#contacts">Записаться</a>
       </div>
       <div class="hero-trust" aria-label="Преимущества сервиса">
         <span><strong>2-3 часа</strong> типовой ремонт</span>
@@ -279,8 +279,6 @@ function homeBody() {
     </div>
   </div>
 </section>
-
-${reviewsBody()}
 
 <section class="section section-gray">
   <div class="container">
@@ -329,6 +327,8 @@ ${statusBody()}
     </div>
   </div>
 </section>
+
+${reviewsBody()}
 
 ${contactBody(".")}`;
 }

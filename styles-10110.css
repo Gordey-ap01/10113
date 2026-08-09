@@ -15,14 +15,23 @@
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  border-radius: 5px;
+  border-radius: 999px;
   padding: 10px 22px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  background: #fff;
+  color: #0369a1;
   font-size: 14px;
   font-weight: 700;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
   transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.site-header .header-actions > .header-b2b,
+.home-page--light .site-header .header-actions > .header-b2b {
+  border-color: rgba(255, 255, 255, 0.96);
+  background: #fff;
+  color: #0369a1;
+  -webkit-text-fill-color: #0369a1;
+  box-shadow: 0 8px 22px rgba(2, 45, 82, 0.18);
 }
 
 @media (min-width: 1121px) {
@@ -30,7 +39,7 @@
     min-height: 50px;
     border: 1px solid rgba(255, 255, 255, 0.7);
     padding: 12px 28px;
-    background: rgba(2, 45, 82, 0.46);
+    background: #fff;
     font-size: 16px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 9px 22px rgba(2, 31, 55, 0.2);
   }
@@ -513,6 +522,10 @@
 }
 
 /* Contact details lead the section; form and map share one baseline. */
+.contact-section {
+  scroll-margin-top: 88px;
+}
+
 .contact-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
