@@ -1,47 +1,48 @@
 <?php
-declare(strict_types=1);
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
 
-/** @var array<string, mixed> $config */
 $config = require __DIR__ . '/mail-config.php';
-date_default_timezone_set((string) ($config['timezone'] ?? 'Asia/Vladivostok'));
+date_default_timezone_set(isset($config['timezone']) ? $config['timezone'] : 'Asia/Vladivostok');
 
-function respond(int $status, bool $ok, string $message): void
+function respond($status, $ok, $message)
 {
     http_response_code($status);
     echo json_encode(
-        ['ok' => $ok, 'message' => $message],
+        array('ok' => $ok, 'message' => $message),
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
     exit;
 }
 
-function clean_value(mixed $value, int $limit = 3000): string
+function clean_value($value, $limit = 3000)
 {
     if (!is_scalar($value)) {
         return '';
     }
 
     $text = trim((string) $value);
-    $text = str_replace(["\0", "\r"], ['', ''], $text);
-    $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text) ?? '';
+    $text = str_replace(array("\0", "\r"), array('', ''), $text);
+    $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text);
+    $text = $sanitized === null ? '' : $sanitized;
+
     return function_exists('mb_substr')
         ? mb_substr($text, 0, $limit, 'UTF-8')
         : substr($text, 0, $limit);
 }
 
-function request_host(): string
+function request_host()
 {
-    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
-    return preg_replace('/:\d+$/', '', $host) ?? '';
+    $host = strtolower(isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '');
+    $host = preg_replace('/:\d+$/', '', $host);
+    return $host === null ? '' : $host;
 }
 
-function same_origin_request(): bool
+function same_origin_request()
 {
-    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? (string) $_SERVER['HTTP_ORIGIN'] : '';
     if ($origin === '') {
         return true;
     }
@@ -50,11 +51,11 @@ function same_origin_request(): bool
     return $originHost !== '' && hash_equals(request_host(), $originHost);
 }
 
-function enforce_rate_limit(array $config): void
+function enforce_rate_limit($config)
 {
-    $limit = max(1, (int) ($config['rate_limit'] ?? 8));
-    $window = max(60, (int) ($config['rate_window_seconds'] ?? 600));
-    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $limit = max(1, (int) (isset($config['rate_limit']) ? $config['rate_limit'] : 8));
+    $window = max(60, (int) (isset($config['rate_window_seconds']) ? $config['rate_window_seconds'] : 600));
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : 'unknown';
     $file = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
         . DIRECTORY_SEPARATOR
         . 'service101-form-'
@@ -69,15 +70,17 @@ function enforce_rate_limit(array $config): void
     }
 
     $raw = stream_get_contents($handle);
-    $entries = json_decode($raw ?: '[]', true);
+    $entries = json_decode($raw ? $raw : '[]', true);
     if (!is_array($entries)) {
-        $entries = [];
+        $entries = array();
     }
 
     $now = time();
     $entries = array_values(array_filter(
         $entries,
-        static fn (mixed $timestamp): bool => is_int($timestamp) && $timestamp > $now - $window
+        function ($timestamp) use ($now, $window) {
+            return is_int($timestamp) && $timestamp > $now - $window;
+        }
     ));
 
     if (count($entries) >= $limit) {
@@ -89,18 +92,18 @@ function enforce_rate_limit(array $config): void
     $entries[] = $now;
     ftruncate($handle, 0);
     rewind($handle);
-    fwrite($handle, (string) json_encode($entries));
+    fwrite($handle, json_encode($entries));
     fflush($handle);
     flock($handle, LOCK_UN);
     fclose($handle);
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+if ((isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') !== 'POST') {
     header('Allow: POST');
     respond(405, false, 'Метод запроса не поддерживается.');
 }
 
-if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 32768) {
+if ((int) (isset($_SERVER['CONTENT_LENGTH']) ? $_SERVER['CONTENT_LENGTH'] : 0) > 32768) {
     respond(413, false, 'Заявка слишком большая.');
 }
 
@@ -108,39 +111,40 @@ if (!same_origin_request()) {
     respond(403, false, 'Источник запроса не разрешён.');
 }
 
-if (clean_value($_POST['website'] ?? '') !== '') {
+if (clean_value(isset($_POST['website']) ? $_POST['website'] : '') !== '') {
     respond(200, true, 'Заявка отправлена.');
 }
 
 enforce_rate_limit($config);
 
-$name = clean_value($_POST['Имя'] ?? '', 160);
-$phone = clean_value($_POST['Телефон'] ?? '', 80);
+$name = clean_value(isset($_POST['Имя']) ? $_POST['Имя'] : '', 160);
+$phone = clean_value(isset($_POST['Телефон']) ? $_POST['Телефон'] : '', 80);
 if ($name === '' || $phone === '') {
     respond(422, false, 'Укажите имя и номер телефона.');
 }
 
-$phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
+$phoneDigits = preg_replace('/\D+/', '', $phone);
+$phoneDigits = $phoneDigits === null ? '' : $phoneDigits;
 if (strlen($phoneDigits) < 10 || strlen($phoneDigits) > 15) {
     respond(422, false, 'Проверьте номер телефона.');
 }
 
-$email = clean_value($_POST['Email'] ?? '', 254);
+$email = clean_value(isset($_POST['Email']) ? $_POST['Email'] : '', 254);
 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
     respond(422, false, 'Проверьте адрес электронной почты.');
 }
 
-$formType = clean_value($_POST['_form_type'] ?? 'contact', 32);
-$subjects = [
+$formType = clean_value(isset($_POST['_form_type']) ? $_POST['_form_type'] : 'contact', 32);
+$subjects = array(
     'contact' => 'Заявка с сайта Сервис 101',
     'onsite' => 'Заявка на выезд мастера — Сервис 101',
     'b2b' => 'Заявка от организации — Сервис 101',
     'booking' => 'Запись на ремонт — Сервис 101',
-];
-$subject = $subjects[$formType] ?? $subjects['contact'];
+);
+$subject = isset($subjects[$formType]) ? $subjects[$formType] : $subjects['contact'];
 
-$ignored = ['_subject', '_template', '_captcha', '_next', '_form_type', 'website', 'branch_choice'];
-$labels = [];
+$ignored = array('_subject', '_template', '_captcha', '_next', '_form_type', 'website', 'branch_choice');
+$labels = array();
 foreach ($_POST as $key => $value) {
     $label = clean_value($key, 100);
     if ($label === '' || in_array($label, $ignored, true)) {
@@ -178,9 +182,9 @@ $message = '<!doctype html><html lang="ru"><head><meta charset="UTF-8"></head>'
     . $rows
     . '</table></div></div></body></html>';
 
-$recipient = (string) ($config['recipient'] ?? '');
-$fromEmail = (string) ($config['from_email'] ?? '');
-$fromName = (string) ($config['from_name'] ?? 'Сервис 101');
+$recipient = isset($config['recipient']) ? (string) $config['recipient'] : '';
+$fromEmail = isset($config['from_email']) ? (string) $config['from_email'] : '';
+$fromName = isset($config['from_name']) ? (string) $config['from_name'] : 'Сервис 101';
 if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false || filter_var($fromEmail, FILTER_VALIDATE_EMAIL) === false) {
     error_log('Service 101 form: invalid mail configuration');
     respond(503, false, 'Отправка временно недоступна. Позвоните нам: +7 (994) 076-01-01.');
@@ -188,18 +192,24 @@ if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false || filter_var($fromE
 
 $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
 $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
-$headers = [
+$headers = array(
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset=UTF-8',
     'Content-Transfer-Encoding: 8bit',
     'From: ' . $encodedFromName . ' <' . $fromEmail . '>',
     'X-Mailer: Service101 Website',
-];
+);
 if ($email !== '') {
     $headers[] = 'Reply-To: ' . $email;
 }
 
-$sent = @mail($recipient, $encodedSubject, $message, implode("\r\n", $headers));
+$sent = @mail(
+    $recipient,
+    $encodedSubject,
+    $message,
+    implode("\r\n", $headers),
+    '-f' . $fromEmail
+);
 if (!$sent) {
     error_log('Service 101 form: mail() returned false');
     respond(503, false, 'Не удалось отправить заявку. Позвоните нам: +7 (994) 076-01-01.');
