@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /remont/
+
+Sitemap: https://xn--101-eddot8cge.xn--p1ai/sitemap.xml

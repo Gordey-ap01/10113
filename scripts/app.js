@@ -3,10 +3,8 @@
   const pageState = pageStateEl ? JSON.parse(pageStateEl.textContent) : { page: "home", root: "." };
   const root = pageState.root || ".";
   const app = document.getElementById("app");
-  const formConfigUrl = `${root}/data/site-config.json`;
-  const defaultFormRecipient = "shineteatr@gmail.com";
+  const formEndpoint = `${root}/api/send-request.php`;
   const selectedServices = new Map();
-  let formRecipient = defaultFormRecipient;
   let records = [];
   let currentServices = [];
   let currentDevice = null;
@@ -124,6 +122,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     initFormDelivery();
+    initRepairRequestLinks();
     initRepairStatistics();
     initLightThemeMotion();
     initScrollTop();
@@ -291,28 +290,9 @@
       );
   }
 
-  async function initFormDelivery() {
+  function initFormDelivery() {
     configureEmailForms(document);
-    document.addEventListener(
-      "submit",
-      (event) => {
-        if (event.target instanceof HTMLFormElement && event.target.matches("[data-email-form]")) {
-          configureEmailForm(event.target);
-        }
-      },
-      true
-    );
-
-    try {
-      const response = await fetch(formConfigUrl, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Form config ${response.status}`);
-      const config = await response.json();
-      if (!isEmail(config.formRecipient)) throw new Error("Invalid form recipient");
-      formRecipient = config.formRecipient.trim();
-      configureEmailForms(document);
-    } catch (error) {
-      console.warn("Form recipient config is unavailable; using the default address.", error);
-    }
+    document.addEventListener("submit", handleEmailFormSubmit);
   }
 
   function configureEmailForms(scope) {
@@ -321,9 +301,89 @@
   }
 
   function configureEmailForm(form) {
-    form.action = `https://formsubmit.co/${formRecipient}`;
-    ensureHiddenFormField(form, "_template", "table");
-    ensureHiddenFormField(form, "_captcha", "false");
+    form.action = formEndpoint;
+    form.method = "POST";
+    ensureHiddenFormField(form, "_form_type", inferFormType(form));
+
+    if (!form.querySelector('[name="website"]')) {
+      const honeypot = document.createElement("input");
+      honeypot.className = "form-honeypot";
+      honeypot.type = "text";
+      honeypot.name = "website";
+      honeypot.tabIndex = -1;
+      honeypot.autocomplete = "off";
+      honeypot.setAttribute("aria-hidden", "true");
+      form.prepend(honeypot);
+    }
+
+    if (!form.querySelector("[data-form-status]")) {
+      const status = document.createElement("p");
+      status.className = "form-submit-status";
+      status.dataset.formStatus = "";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      form.append(status);
+    }
+  }
+
+  function inferFormType(form) {
+    if (form.dataset.formType) return form.dataset.formType;
+    if (form.classList.contains("onsite-form")) return "onsite";
+    if (form.classList.contains("b2b-form")) return "b2b";
+    if (form.classList.contains("booking-form")) return "booking";
+    return "contact";
+  }
+
+  async function handleEmailFormSubmit(event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches("[data-email-form]")) return;
+    event.preventDefault();
+    configureEmailForm(form);
+    if (!form.reportValidity() || form.dataset.submitting === "true") return;
+
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector("[data-form-status]");
+    const originalLabel = button?.textContent || "Отправить заявку";
+    form.dataset.submitting = "true";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Отправляем...";
+    }
+    if (status) {
+      status.className = "form-submit-status is-pending";
+      status.textContent = "Отправляем заявку в Сервис 101...";
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(payload.message || "Не удалось отправить заявку.");
+      }
+      form.reset();
+      if (status) {
+        status.className = "form-submit-status is-success";
+        status.textContent = payload.message || "Заявка отправлена. Мастер скоро свяжется с вами.";
+      }
+    } catch (error) {
+      if (status) {
+        status.className = "form-submit-status is-error";
+        const message = error.message || "Не удалось отправить заявку.";
+        status.textContent = message.includes("+7")
+          ? message
+          : `${message} Позвоните: +7 (994) 076-01-01.`;
+      }
+    } finally {
+      delete form.dataset.submitting;
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
   }
 
   function ensureHiddenFormField(form, name, value) {
@@ -337,8 +397,20 @@
     input.value = value;
   }
 
-  function isEmail(value) {
-    return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  function initRepairRequestLinks() {
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-request-device]");
+      if (!link) return;
+      const requestedDevice = link.dataset.requestDevice;
+      setTimeout(() => {
+        const select = document.querySelector('#contacts select[name="Тип устройства"]');
+        if (!select || !requestedDevice) return;
+        const option = Array.from(select.options).find(
+          (item) => item.value === requestedDevice || item.textContent.trim() === requestedDevice
+        );
+        if (option) select.value = option.value;
+      });
+    });
   }
 
   function renderCategoryPage(categorySlug) {
@@ -651,7 +723,7 @@
             <p class="section-text contact-head__text">Филиалы работают ежедневно с 10:00 до 19:00 без перерывов и выходных. Можно приехать в сервис или оставить заявку на выезд мастера.</p>
           </div>
           <div class="contact-grid">
-            <form class="contact-form" action="https://formsubmit.co/" method="POST" data-email-form>
+            <form class="contact-form" action="${root}/api/send-request.php" method="POST" data-email-form data-form-type="contact">
               <input type="hidden" name="_subject" value="Заявка с сайта Сервис 101">
               <input type="hidden" name="_template" value="table">
               <input type="hidden" name="_captcha" value="false">
@@ -1048,7 +1120,7 @@
           </div>
           <button class="modal__close" type="button" aria-label="Закрыть">×</button>
         </div>
-        <form class="booking-form" action="https://formsubmit.co/" method="POST" data-email-form>
+        <form class="booking-form" action="${root}/api/send-request.php" method="POST" data-email-form data-form-type="booking">
           <input type="hidden" name="_subject" value="Новая заявка с сайта Сервис 101">
           <input type="hidden" name="_template" value="table">
           <input type="hidden" name="_captcha" value="false">

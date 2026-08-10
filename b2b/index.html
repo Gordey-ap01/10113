@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ремонт техники для бизнеса | Сервис 101</title>
   <meta name="description" content="Обслуживание офисной и производственной техники для компаний Комсомольска-на-Амуре: выезд, диагностика, ремонт и отчётные документы.">
+  <link rel="canonical" href="https://xn--101-eddot8cge.xn--p1ai/b2b/">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/branding/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/branding/favicon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/branding/apple-touch-icon.png">
@@ -94,7 +95,7 @@
       <h2 class="section-title">Опишите парк техники и задачу</h2>
       <p class="section-text">Ответим в рабочее время, предложим формат обслуживания и сразу подключим нужного мастера.</p>
     </div>
-    <form class="contact-form b2b-form" action="https://formsubmit.co/" method="POST" data-email-form>
+    <form class="contact-form b2b-form" action="../api/send-request.php" method="POST" data-email-form data-form-type="b2b">
       <input type="hidden" name="_subject" value="B2B-заявка с сайта Сервис 101">
       <input type="hidden" name="_template" value="table">
       <input type="hidden" name="_captcha" value="false">
@@ -128,7 +129,7 @@
       <p class="section-text contact-head__text">Два филиала в Комсомольске-на-Амуре работают ежедневно с 10:00 до 19:00 без перерывов и выходных.</p>
     </div>
     <div class="contact-grid">
-      <form class="contact-form" action="https://formsubmit.co/" method="POST" data-email-form>
+      <form class="contact-form" action="../api/send-request.php" method="POST" data-email-form data-form-type="contact">
         <input type="hidden" name="_subject" value="Заявка с сайта Сервис 101">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_captcha" value="false">
@@ -140,6 +141,7 @@
           <option>Ноутбук</option>
           <option>Компьютер</option>
           <option>Игровая приставка</option>
+          <option>Видеокарта</option>
           <option>Геймпад</option>
           <option>Другое</option>
         </select>
@@ -183,7 +185,7 @@
     </div>
     <div class="footer__actions">
       <a href="../b2b/index.html">Организациям</a>
-      <a class="btn btn-primary btn-sm" href="../remont/telefony/index.html">Выбрать ремонт</a>
+      <a class="btn btn-primary btn-sm" href="#contacts">Записаться</a>
     </div>
   </div>
 </footer>

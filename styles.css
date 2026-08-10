@@ -2172,6 +2172,45 @@ body {
   resize: vertical;
 }
 
+.form-honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.form-submit-status {
+  min-height: 20px;
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.form-submit-status:empty {
+  display: none;
+}
+
+.form-submit-status.is-pending {
+  color: #0369a1;
+}
+
+.form-submit-status.is-success {
+  color: #047857;
+}
+
+.form-submit-status.is-error {
+  color: #b91c1c;
+}
+
+form[data-email-form] button[type="submit"]:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .contact-card {
   display: grid;
   gap: 16px;

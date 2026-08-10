@@ -31,8 +31,23 @@ Use the local HTTP server below.
 
 ## Form recipient
 
-All website forms use the FormSubmit table email template. Change `formRecipient` in
-`data/site-config.json` to redirect every form to another email address.
+Production forms are sent by `api/send-request.php` through the hosting server. Change the
+`recipient` value in `api/mail-config.php` to update the destination for every form. The
+current recipient is `101kms@mail.ru`. The configuration file cannot be opened over HTTP.
+
+## Production build
+
+The temporary production build intentionally excludes the unfinished device catalog and
+`data/services.csv`. Requests to `/remont/` are redirected to the contact form with a
+temporary HTTP 302 response.
+
+```bash
+node tools/build-production.mjs
+```
+
+The deployable files are written to `.production-build/`. Do not switch the production
+domain before the PHP handler and delivery to the recipient mailbox have been tested on an
+isolated Beget site or technical subdomain.
 
 ## Verify locally
 

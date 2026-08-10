@@ -219,7 +219,7 @@ function footer(root) {
     </div>
     <div class="footer__actions">
       <a href="${root}/b2b/index.html">Организациям</a>
-      <a class="btn btn-primary btn-sm" href="${root}/remont/telefony/index.html">Выбрать ремонт</a>
+      <a class="btn btn-primary btn-sm" href="${root}/index.html#contacts">Записаться</a>
     </div>
   </div>
 </footer>`;
@@ -246,9 +246,9 @@ function homeBody() {
         <strong class="revival-counter__number" data-revival-counter>8 545</strong>
         <small>и счёт продолжает расти</small>
       </div>
-      <a class="repair-float repair-float--phone" href="./remont/telefony/index.html">Смартфоны</a>
-      <a class="repair-float repair-float--laptop" href="./remont/noutbuki/index.html">Ноутбуки</a>
-      <a class="repair-float repair-float--console" href="./remont/pristavki/index.html">Консоли</a>
+      <a class="repair-float repair-float--phone" href="#contacts" data-request-device="Смартфон или планшет">Смартфоны</a>
+      <a class="repair-float repair-float--laptop" href="#contacts" data-request-device="Ноутбук">Ноутбуки</a>
+      <a class="repair-float repair-float--console" href="#contacts" data-request-device="Игровая приставка">Консоли</a>
       <a class="repair-float repair-float--status" href="#repair-status">Статус заказа</a>
     </div>
   </div>
@@ -272,7 +272,7 @@ function homeBody() {
     <div class="section-head">
       <p class="eyebrow">Специализация сервиса</p>
       <h2 class="section-title">Выберите направление ремонта</h2>
-      <p class="section-text">У каждого направления есть отдельные страницы устройств с ценами работ, быстрым выбором услуг и записью в удобный филиал.</p>
+      <p class="section-text">Выберите направление и оставьте заявку. Мастер уточнит модель, неисправность, срок и стоимость ремонта.</p>
     </div>
     <div class="cat-grid">
       ${catalog.categories.map(categoryCard).join("")}
@@ -321,8 +321,8 @@ ${statusBody()}
       <h2>Выберите устройство и отправьте заявку за минуту</h2>
       <p>Если точной модели нет, оставьте заявку без выбора услуги. Мастер уточнит деталь, филиал, срок и итоговую цену.</p>
       <div class="cta-actions">
-        <a class="btn btn-primary" href="./remont/telefony/index.html">Начать с телефонов</a>
-        <a class="btn btn-ghost" href="./remont/vyezdnoj-remont/index.html">Заказать выезд</a>
+        <a class="btn btn-primary" href="#contacts" data-request-device="Смартфон или планшет">Оставить заявку</a>
+        <a class="btn btn-ghost" href="#onsite-service">Заказать выезд</a>
       </div>
     </div>
   </div>
@@ -335,7 +335,15 @@ ${contactBody(".")}`;
 
 function categoryCard(category) {
   const meta = categoryMeta[category.id] || { text: category.title, icon: pcIcon(), gradient: "grad-pc" };
-  return `<a class="cat-card" href="./remont/${category.id}/index.html">
+  const deviceType = {
+    telefony: "Смартфон или планшет",
+    noutbuki: "Ноутбук",
+    kompyutery: "Компьютер",
+    pristavki: "Игровая приставка",
+    videokarty: "Видеокарта",
+    gejmpady: "Геймпад",
+  }[category.id] || "Другое";
+  return `<a class="cat-card" href="#contacts" data-request-device="${escapeHTML(deviceType)}">
     <img class="cat-card__image" src="${meta.image || "./assets/categories/kompyutery.png"}" alt="" loading="lazy" aria-hidden="true">
     <span class="cat-card__head">
       <span class="cat-title">${escapeHTML(category.name)}</span>
@@ -344,7 +352,7 @@ function categoryCard(category) {
     <span class="cat-card__content">
       <span class="cat-text">${escapeHTML(meta.text)}</span>
     </span>
-    <span class="cat-open">Выбрать <span aria-hidden="true">→</span></span>
+    <span class="cat-open">Оставить заявку <span aria-hidden="true">→</span></span>
   </a>`;
 }
 
@@ -463,7 +471,7 @@ function b2bBody() {
       <h2 class="section-title">Опишите парк техники и задачу</h2>
       <p class="section-text">Ответим в рабочее время, предложим формат обслуживания и сразу подключим нужного мастера.</p>
     </div>
-    <form class="contact-form b2b-form" action="https://formsubmit.co/" method="POST" data-email-form>
+    <form class="contact-form b2b-form" action="../api/send-request.php" method="POST" data-email-form data-form-type="b2b">
       <input type="hidden" name="_subject" value="B2B-заявка с сайта Сервис 101">
       <input type="hidden" name="_template" value="table">
       <input type="hidden" name="_captcha" value="false">
@@ -501,7 +509,7 @@ function contactBody(root) {
       <p class="section-text contact-head__text">Два филиала в Комсомольске-на-Амуре работают ежедневно с 10:00 до 19:00 без перерывов и выходных.</p>
     </div>
     <div class="contact-grid">
-      <form class="contact-form" action="https://formsubmit.co/" method="POST" data-email-form>
+      <form class="contact-form" action="${root}/api/send-request.php" method="POST" data-email-form data-form-type="contact">
         <input type="hidden" name="_subject" value="Заявка с сайта Сервис 101">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_captcha" value="false">
