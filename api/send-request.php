@@ -1,5 +1,6 @@
 <?php
 
+header_remove('X-Powered-By');
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
