@@ -729,6 +729,7 @@
               <input type="hidden" name="_captcha" value="false">
               <input class="input" type="text" name="Имя" placeholder="Ваше имя" required>
               <input class="input" type="tel" name="Телефон" placeholder="+7 (___) ___-__-__" required>
+              <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Ваша электронная почта" required>
               <select class="input" name="Тип устройства" required>
                 <option value="">Тип устройства</option>
                 <option>Смартфон или планшет</option>
@@ -1150,6 +1151,10 @@
             <label class="form-field">
               <span>Телефон</span>
               <input class="input" type="tel" name="Телефон" autocomplete="tel" inputmode="tel" placeholder="+7 (___) ___-__-__" required>
+            </label>
+            <label class="form-field form-field--wide">
+              <span>Электронная почта</span>
+              <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="name@example.ru" required>
             </label>
             <label class="form-field form-field--wide">
               <span>Описание неисправности</span>

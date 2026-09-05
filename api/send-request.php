@@ -131,7 +131,10 @@ if (strlen($phoneDigits) < 10 || strlen($phoneDigits) > 15) {
 }
 
 $email = clean_value(isset($_POST['Email']) ? $_POST['Email'] : '', 254);
-if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+if ($email === '') {
+    respond(422, false, 'Укажите адрес электронной почты.');
+}
+if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
     respond(422, false, 'Проверьте адрес электронной почты.');
 }
 

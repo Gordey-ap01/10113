@@ -44,6 +44,7 @@ try {
   await expect(cdp, "category requests use contact anchor", "[...document.querySelectorAll('.cat-card')].every((link) => link.getAttribute('href') === '#contacts')");
   await expect(cdp, "forms use local endpoint", "[...document.querySelectorAll('form[data-email-form]')].every((form) => form.action.startsWith(location.origin + '/') && form.action.endsWith('/api/send-request.php'))");
   await expect(cdp, "forms have spam protection", "[...document.querySelectorAll('form[data-email-form]')].every((form) => form.querySelector('[name=\"website\"]') && form.querySelector('[data-form-status]'))");
+  await expect(cdp, "forms require customer email", "[...document.querySelectorAll('form[data-email-form]')].every((form) => form.querySelector('input[type=\"email\"][name=\"Email\"][required]'))");
   await capture(cdp, "home-desktop.png");
   await clickCenter(cdp, '.cat-card[data-request-device="Ноутбук"]');
   await delay(300);
@@ -63,6 +64,7 @@ try {
   await navigate(cdp, `${baseUrl}/b2b/`);
   await expect(cdp, "b2b rendered", "document.body.classList.contains('b2b-page')");
   await expect(cdp, "b2b form uses local endpoint", "document.querySelector('.b2b-form')?.action.startsWith(location.origin + '/') && document.querySelector('.b2b-form')?.action.endsWith('/api/send-request.php')");
+  await expect(cdp, "b2b forms require customer email", "[...document.querySelectorAll('form[data-email-form]')].every((form) => form.querySelector('input[type=\"email\"][name=\"Email\"][required]'))");
   await expect(cdp, "b2b has no repair links", "document.querySelector('a[href*=\"/remont/\"]') === null");
   await expect(cdp, "b2b has no horizontal overflow", "document.documentElement.scrollWidth <= innerWidth + 2");
   await capture(cdp, "b2b-desktop.png");
