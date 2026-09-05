@@ -2167,6 +2167,20 @@ body {
   gap: 12px;
 }
 
+.form-email-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-email-note {
+  display: block;
+  margin: 0 2px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .contact-form textarea {
   min-height: 132px;
   resize: vertical;

@@ -515,7 +515,10 @@ function contactBody(root) {
         <input type="hidden" name="_captcha" value="false">
         <input class="input" type="text" name="Имя" placeholder="Ваше имя" required>
         <input class="input" type="tel" name="Телефон" placeholder="+7 (___) ___-__-__" required>
-        <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Ваша электронная почта" required>
+        <label class="form-email-field">
+          <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Ваша электронная почта">
+          <small class="form-email-note">Если вы организация, пожалуйста, пропишите электронную почту.</small>
+        </label>
         <select class="input" name="Тип устройства" required>
           <option value="">Тип устройства</option>
           <option>Смартфон или планшет</option>
