@@ -59,9 +59,9 @@ final class Workbook
                     foreach ($keys as $i=>$key) {
                         if ($kind==='prices' && $key==='device_name') { continue; }
                         $cell=$sheet->getCell([$i+1,$row]);
-                        if ($cell->getDataType()==='f') { throw new \RuntimeException("Лист «$title», строка $row: формула в поле «{$headers[$i]}» недопустима. Вставьте значение."); }
+                        if ($cell->getDataType()==='f') { throw new \RuntimeException("Лист «{$title}», строка $row: формула в поле «{$headers[$i]}» недопустима. Вставьте значение."); }
                         $value=trim((string)$cell->getValue());
-                        if (mb_strlen($value)>10000) { throw new \RuntimeException("Лист «$title», строка $row: слишком длинное значение."); }
+                        if (mb_strlen($value)>10000) { throw new \RuntimeException("Лист «{$title}», строка $row: слишком длинное значение."); }
                         $record[$key]=$value; $nonempty=$nonempty || $value!=='';
                     }
                     if ($nonempty) { $result[$kind][]=$record; }

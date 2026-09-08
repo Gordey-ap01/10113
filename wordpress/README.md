@@ -36,6 +36,7 @@ The integration scripts require the isolated seeded catalog and a staging admini
 
 - `tools/test-catalog.php`: initial/repeated imports, exact amounts, invalid rows, partial updates, stale preview, rollback and XLSX roundtrip.
 - `tools/test-lifecycle.php`: case-insensitive code collisions, new model with copied service, publication, image clearing, hiding services, permissions and unsafe image URLs. Temporary changes are restored.
+- `tools/test-workbook-security.php`: actual XLSX fixtures containing a formula, macro entry, external link or embedded file must be rejected before any catalog change.
 - `tools/test-http.php`: all 124 current catalog routes with administrator and visitor access, source HTML prices, home/B2B forms and old URL redirects. It uses an ephemeral local QA session and private host credentials, which are never part of a deployment.
 - Browser: desktop/mobile layout, selecting multiple services, modal and simulated request. HTTP admin upload and export were tested against the actual Beget PHP 8.3 frontend.
 
