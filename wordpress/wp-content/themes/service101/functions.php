@@ -33,14 +33,21 @@ function s101_state(array $extra=[]): void
     $state=array_merge(['page'=>is_front_page()?'home':'b2b','root'=>untrailingslashit(home_url()),'formEndpoint'=>admin_url('admin-post.php?action=s101_request'),'statsUrl'=>get_stylesheet_directory_uri().'/data/repair-stats.json'],$extra);
     echo '<script id="page-state" type="application/json">'.wp_json_encode($state,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE).'</script>';
 }
+function s101_catalog_seo_title(): string
+{
+    if (\Service101\Routes::$onsite) { return 'Выездной ремонт техники'; }
+    $category=(string)get_query_var('s101_category');
+    if ($category!=='') { return s101_copy()['categories'][$category]['repairTitle']??\Service101\Routes::$device['category_title']; }
+    return 'Ремонт '.s101_device_name(\Service101\Routes::$device);
+}
 add_filter('pre_get_document_title',static function($title){
-    if (class_exists('Service101\\Routes') && \Service101\Routes::$device) { return 'Ремонт '.s101_device_name(\Service101\Routes::$device).' в Комсомольске-на-Амуре | Сервис 101'; }
+    if (class_exists('Service101\\Routes') && \Service101\Routes::$device) { return s101_catalog_seo_title().' в Комсомольске-на-Амуре | Сервис 101'; }
     if (is_front_page()) { return 'Сервис 101 - ремонт техники в Комсомольске-на-Амуре'; }
     return $title;
 });
 add_action('wp_head',static function(){
     $device=class_exists('Service101\\Routes')?\Service101\Routes::$device:null;
-    $description=$device ? 'Ремонт '.s101_device_name($device).' в Комсомольске-на-Амуре: услуги, цены, сроки и запись в Сервис 101.' : 'Сервис 101: ремонт телефонов, ноутбуков, компьютеров, приставок, видеокарт и геймпадов в Комсомольске-на-Амуре.';
+    $description=$device ? s101_catalog_seo_title().' в Комсомольске-на-Амуре: услуги, цены, сроки и запись в Сервис 101.' : 'Сервис 101: ремонт телефонов, ноутбуков, компьютеров, приставок, видеокарт и геймпадов в Комсомольске-на-Амуре.';
     echo '<meta name="description" content="'.esc_attr($description).'">';
     echo '<link rel="canonical" href="'.esc_url(home_url((string)wp_parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH))).'">';
     foreach ([32,192] as $size) { echo '<link rel="icon" type="image/png" sizes="'.$size.'x'.$size.'" href="'.esc_url(get_stylesheet_directory_uri().'/assets/branding/favicon-'.$size.'.png').'">'; }
