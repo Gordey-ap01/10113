@@ -1,0 +1,140 @@
+
+<section class="b2b-hero">
+  <div class="container b2b-hero__inner">
+    <div>
+      <p class="eyebrow">Сервис 101 для бизнеса</p>
+      <h1>Ваш бизнес работает<br>с Сервисом 101</h1>
+      <p>Обслуживаем компьютеры, ноутбуки, телефоны, кассовое и периферийное оборудование компаний Комсомольска-на-Амуре.</p>
+      <div class="b2b-hero__actions">
+        <a class="btn btn-primary" href="#b2b-request">Обсудить обслуживание</a>
+        <a class="btn btn-ghost" href="tel:+79940760101">+7 (994) 076-01-01</a>
+      </div>
+    </div>
+    <div class="b2b-sla" aria-label="Условия обслуживания">
+      <span><strong>от 1 часа</strong> выезд специалиста</span>
+      <span><strong>до 12 мес</strong> гарантия на работы</span>
+      <span><strong>2 филиала</strong> и выезд по городу</span>
+      <span><strong>с документами</strong> для бухгалтерии</span>
+    </div>
+  </div>
+</section>
+
+<section class="section section-white">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Что берём на себя</p>
+      <h2 class="section-title">Единая точка ремонта для техники компании</h2>
+      <p class="section-text">Работаем с разовыми заявками и регулярным обслуживанием. Согласуем приоритет, сроки и бюджет до начала ремонта.</p>
+    </div>
+    <div class="b2b-services">
+      <article><span>01</span><h3>Офисная техника</h3><p>Компьютеры, ноутбуки, моноблоки, телефоны, принтеры и периферия.</p></article>
+      <article><span>02</span><h3>Выезд и доставка</h3><p>Диагностика на рабочем месте или бережная доставка устройства в сервис.</p></article>
+      <article><span>03</span><h3>Срочный ремонт</h3><p>Приоритетная очередь для критичной техники и понятный статус каждой заявки.</p></article>
+      <article><span>04</span><h3>Модернизация</h3><p>SSD, память, охлаждение, настройка программ и подготовка рабочих мест.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-gray">
+  <div class="container b2b-process">
+    <div class="section-head">
+      <p class="eyebrow">Как работаем</p>
+      <h2 class="section-title">Без лишних согласований</h2>
+    </div>
+    <ol>
+      <li><span>1</span><div><strong>Принимаем заявку</strong><p>Фиксируем технику, неисправность, адрес и приоритет.</p></div></li>
+      <li><span>2</span><div><strong>Диагностируем</strong><p>Сообщаем срок, состав работ и итоговую стоимость.</p></div></li>
+      <li><span>3</span><div><strong>Ремонтируем</strong><p>Назначаем профильного мастера и держим контакт с ответственным сотрудником.</p></div></li>
+      <li><span>4</span><div><strong>Закрываем документами</strong><p>Возвращаем технику, гарантию и комплект отчётных документов.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="b2b-request" class="section section-white">
+  <div class="container b2b-request">
+    <div>
+      <p class="eyebrow">Заявка для бизнеса</p>
+      <h2 class="section-title">Опишите парк техники и задачу</h2>
+      <p class="section-text">Ответим в рабочее время, предложим формат обслуживания и сразу подключим нужного мастера.</p>
+    </div>
+    <form class="contact-form b2b-form" action="/api/send-request.php" method="POST" data-email-form data-form-type="b2b">
+      <input type="hidden" name="_subject" value="B2B-заявка с сайта Сервис 101">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+      <input class="input" type="text" name="Компания" placeholder="Название компании" required>
+      <input class="input" type="text" name="Имя" placeholder="Контактное лицо" required>
+      <input class="input" type="tel" name="Телефон" placeholder="+7 (___) ___-__-__" required>
+      <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Рабочая почта" required>
+      <select class="input" name="Формат" required>
+        <option value="">Формат обслуживания</option>
+        <option>Разовый ремонт</option>
+        <option>Регулярное обслуживание</option>
+        <option>Срочный выезд</option>
+      </select>
+      <textarea class="input" name="Задача" rows="5" placeholder="Какая техника и что произошло" required></textarea>
+      <button class="btn btn-primary" type="submit">Отправить B2B-заявку</button>
+    </form>
+  </div>
+</section>
+
+<section id="contacts" class="section section-gray contact-section">
+  <div class="container">
+    <div class="contact-head">
+      <div class="section-head">
+        <p class="eyebrow">Контакты</p>
+        <h2 class="section-title">Остались вопросы? Свяжитесь - бесплатная консультация!</h2>
+      </div>
+      <div class="contact-lines contact-lines--lead" aria-label="Телефон и электронная почта">
+        <a href="tel:+79940760101">+7 (994) 076-01-01</a>
+        <a href="mailto:101kms@mail.ru">101kms@mail.ru</a>
+      </div>
+      <p class="section-text contact-head__text">Два филиала в Комсомольске-на-Амуре работают ежедневно с 10:00 до 19:00 без перерывов и выходных.</p>
+    </div>
+    <div class="contact-grid">
+      <form class="contact-form" action="/api/send-request.php" method="POST" data-email-form data-form-type="contact">
+        <input type="hidden" name="_subject" value="Заявка с сайта Сервис 101">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_captcha" value="false">
+        <input class="input" type="text" name="Имя" placeholder="Ваше имя" required>
+        <input class="input" type="tel" name="Телефон" placeholder="+7 (___) ___-__-__" required>
+        <label class="form-email-field">
+          <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Ваша электронная почта">
+          <small class="form-email-note">Если вы организация, пожалуйста, пропишите электронную почту.</small>
+        </label>
+        <select class="input" name="Тип устройства" required>
+          <option value="">Тип устройства</option>
+          <option>Смартфон или планшет</option>
+          <option>Ноутбук</option>
+          <option>Компьютер</option>
+          <option>Игровая приставка</option>
+          <option>Видеокарта</option>
+          <option>Геймпад</option>
+          <option>Другое</option>
+        </select>
+        <textarea class="input" name="Описание" rows="5" placeholder="Опишите неисправность"></textarea>
+        <select class="input" name="Филиал" required>
+          <option value="">Выберите филиал</option>
+          <option>ул. Вокзальная, 47 · ежедневно 10:00-19:00</option>
+          <option>ул. Орехова, 54 · ежедневно 10:00-19:00</option>
+          <option>Нужен выезд мастера</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Отправить заявку</button>
+      </form>
+      <div class="contact-card">
+        <div class="branch-list">
+          <a class="branch-item" href="https://go.2gis.com/ooow7o" target="_blank" rel="noreferrer">
+            <strong>ул. Вокзальная, 47</strong>
+            <span>Ежедневно 10:00-19:00</span>
+          </a>
+          <a class="branch-item" href="https://go.2gis.com/8z19r" target="_blank" rel="noreferrer">
+            <strong>ул. Орехова, 54</strong>
+            <span>Ежедневно 10:00-19:00</span>
+          </a>
+        </div>
+        <a class="map-frame service-map" href="https://yandex.ru/maps/?ll=137.026378%2C50.567777&amp;z=12" target="_blank" rel="noreferrer" aria-label="Открыть два филиала Сервиса 101 на Яндекс Картах">
+          <img src="https://static-maps.yandex.ru/1.x/?ll=137.026378,50.567777&amp;spn=0.095,0.062&amp;size=650,450&amp;l=map&amp;pt=136.9882456,50.5460458,pm2blm1~137.0645113,50.5895089,pm2blm2&amp;lang=ru_RU" alt="Два филиала Сервиса 101: Вокзальная, 47 и Орехова, 54" loading="lazy">
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

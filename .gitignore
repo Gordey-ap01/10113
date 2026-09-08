@@ -21,3 +21,7 @@ wordpress/**/vendor/
 wordpress/build/
 wordpress/.runtime/
 wordpress/**/originals/
+wordpress/wp-content/themes/service101/assets/
+wordpress/wp-content/themes/service101/scripts/
+wordpress/wp-content/themes/service101/styles*.css
+wordpress/wp-content/themes/service101/data/

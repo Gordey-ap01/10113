@@ -77,6 +77,8 @@ final class Workbook
         $book=new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $book->getProperties()->setCreator('Сервис 101')->setTitle('Каталог устройств и цены')->setCustomProperty('service101_schema',1)->setCustomProperty('service101_revision',Catalog::revision());
         $devices=Catalog::devices(true); $prices=Catalog::prices();
+        uasort($prices,static fn($a,$b)=>strnatcasecmp($a['device_code'],$b['device_code']) ?: $a['order']<=>$b['order'] ?: strcmp($a['service_code'],$b['service_code']));
+        $lookup_values=[];
         $configs=[['Устройства',self::DEVICE_HEADERS,self::DEVICE_KEYS,$devices,'Devices'],['Услуги и цены',self::PRICE_HEADERS,self::PRICE_KEYS,$prices,'DeviceServices']];
         foreach ($configs as $index=>[$title,$headers,$keys,$rows,$table_name]) {
             $sheet=$index===0 ? $book->getActiveSheet() : $book->createSheet(); $sheet->setTitle($title);
@@ -94,18 +96,29 @@ final class Workbook
                     $numeric=in_array($key,['work_amount','total_amount','order'],true) && $value!==null && $value!=='';
                     $sheet->setCellValueExplicit([$c+1,$r], $value??'', $numeric ? \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC : \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 }
+                if ($index===1) {
+                    $sheet->setCellValue('B'.$r,'=IF(A'.$r.'="","",IFNA(VLOOKUP(A'.$r.',\'Устройства\'!$A$8:$B$1007,2,FALSE),"Проверьте код"))');
+                    $lookup_values[$title.'!B'.$r]=$data['device_name'];
+                }
+                $sheet->getRowDimension($r)->setRowHeight(40);
                 $r++;
             }
             $end=max(8,$r-1);
             $table=new \PhpOffice\PhpSpreadsheet\Worksheet\Table("A7:$last$end",$table_name);
             $table->setStyle((new \PhpOffice\PhpSpreadsheet\Worksheet\Table\TableStyle())->setTheme('TableStyleMedium2')->setShowRowStripes(true));
             $sheet->addTable($table); $sheet->freezePane('C8'); $sheet->setSelectedCell('B8');
+            $sheet->setShowGridlines(false);
+            $sheet->getStyle("A3:$last$end")->getFont()->setName('Arial')->setSize(10);
             $sheet->getStyle("A1:{$last}2")->getFill()->setFillType('solid')->getStartColor()->setARGB('FF123A43');
             $sheet->getStyle('A1')->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFFFFFF'))->setBold(true)->setSize(22);
             $sheet->getStyle("A7:$last$end")->getAlignment()->setVertical('top')->setWrapText(true);
             $sheet->getStyle("A7:{$last}7")->getFont()->setBold(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFFFFFF'));
             $sheet->getStyle("A7:{$last}7")->getFill()->setFillType('solid')->getStartColor()->setARGB('FF176779');
             $sheet->getRowDimension(7)->setRowHeight(36);
+            if ($index===1) {
+                foreach (['F','H'] as $column) { $sheet->getStyle($column.'8:'.$column.$end)->getNumberFormat()->setFormatCode('#,##0.00'); }
+                $sheet->getStyle('B8:B'.$end)->getFill()->setFillType('solid')->getStartColor()->setARGB('FFEEF4FF');
+            }
             foreach ($keys as $c=>$key) { $sheet->getColumnDimensionByColumn($c+1)->setWidth(in_array($key,['description','name','path','image1','image2','image3'],true) ? 42 : 20); }
             $choices=$index===0 ? ['E'=>['Черновик','Опубликовать','Скрыть']] : ['E'=>['Фиксированная','От','Бесплатно','По запросу'],'G'=>['Фиксированная','Ориентир','От','Бесплатно','После диагностики'],'L'=>['Обновить','Скрыть']];
             foreach ($choices as $column=>$values) {
@@ -120,6 +133,10 @@ final class Workbook
         foreach ($lines as $i=>$line) { $guide->setCellValue('A'.($i+1),$line); $guide->getRowDimension($i+1)->setRowHeight($i===0?36:44); }
         $guide->getStyle('A1:A12')->getAlignment()->setWrapText(true)->setVertical('center'); $guide->getStyle('A1')->getFont()->setBold(true)->setSize(20);
         $book->setActiveSheetIndex(0);
-        $writer=new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($book); $writer->setPreCalculateFormulas(false); $writer->save($path); $book->disconnectWorksheets();
+        // The lookup results are already known from the same exported device map.
+        // Seed the public calculation cache so exporting 1941 rows avoids repeated table scans.
+        $calculation=\PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance($book);
+        foreach ($lookup_values as $cell=>$value) { $calculation->saveValueToCache($cell,$value); }
+        $writer=new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($book); $writer->setPreCalculateFormulas(true); $writer->save($path); $book->disconnectWorksheets();
     }
 }

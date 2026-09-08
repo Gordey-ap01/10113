@@ -1,0 +1,66 @@
+
+      <section id="contacts" class="section section-gray contact-section">
+        <div class="container">
+          <div class="contact-head">
+            <div class="section-head">
+              <p class="eyebrow">Контакты</p>
+              <h2 class="section-title">Остались вопросы? Свяжитесь - бесплатная консультация!</h2>
+            </div>
+            <div class="contact-lines contact-lines--lead" aria-label="Телефон и электронная почта">
+              <a href="tel:+79940760101">+7 (994) 076-01-01</a>
+              <a href="mailto:101kms@mail.ru">101kms@mail.ru</a>
+            </div>
+            <p class="section-text contact-head__text">Филиалы работают ежедневно с 10:00 до 19:00 без перерывов и выходных. Можно приехать в сервис или оставить заявку на выезд мастера.</p>
+          </div>
+          <div class="contact-grid">
+            <form class="contact-form" action="/api/send-request.php" method="POST" data-email-form data-form-type="contact">
+              <input type="hidden" name="_subject" value="Заявка с сайта Сервис 101">
+              <input type="hidden" name="_template" value="table">
+              <input type="hidden" name="_captcha" value="false">
+              <input class="input" type="text" name="Имя" placeholder="Ваше имя" required>
+              <input class="input" type="tel" name="Телефон" placeholder="+7 (___) ___-__-__" required>
+              <label class="form-email-field">
+                <input class="input" type="email" name="Email" autocomplete="email" inputmode="email" maxlength="254" placeholder="Ваша электронная почта">
+                <small class="form-email-note">Если вы организация, пожалуйста, пропишите электронную почту.</small>
+              </label>
+              <select class="input" name="Тип устройства" required>
+                <option value="">Тип устройства</option>
+                <option>Смартфон или планшет</option>
+                <option>Ноутбук</option>
+                <option>Компьютер</option>
+                <option>Игровая приставка</option>
+                <option>Геймпад</option>
+                <option>Другое</option>
+              </select>
+              <textarea class="input" name="Описание" rows="5" placeholder="Опишите неисправность"></textarea>
+              <select class="input" name="Филиал" required>
+                <option value="">Выберите филиал</option>
+                <option>ул. Вокзальная, 47 · ежедневно 10:00-19:00</option>
+                <option>ул. Орехова, 54 · ежедневно 10:00-19:00</option>
+                <option>Нужен выезд мастера</option>
+              </select>
+              <button class="btn btn-primary" type="submit">Отправить заявку</button>
+            </form>
+            <div class="contact-card">
+              <div class="branch-list">
+                <a class="branch-item" href="https://go.2gis.com/ooow7o" target="_blank" rel="noreferrer">
+                  <strong>ул. Вокзальная, 47</strong>
+                  <span>Ежедневно 10:00-19:00</span>
+                </a>
+                <a class="branch-item" href="https://go.2gis.com/8z19r" target="_blank" rel="noreferrer">
+                  <strong>ул. Орехова, 54</strong>
+                  <span>Ежедневно 10:00-19:00</span>
+                </a>
+              </div>
+              <div class="map-frame service-map js-yandex-map" role="region" aria-label="Карта двух филиалов Сервиса 101">
+      <div class="service-map__fallback">
+        <strong>Два филиала Сервиса 101</strong>
+        <span>Загружаем интерактивную Яндекс Карту...</span>
+        <a href="https://yandex.ru/maps/?ll=137.026378%2C50.567777&z=12" target="_blank" rel="noreferrer">Открыть в Яндекс Картах</a>
+      </div>
+    </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    

@@ -22,3 +22,6 @@ add_action('admin_post_s101_catalog', [Admin::class, 'action']);
 add_filter('post_type_link', [Routes::class, 'permalink'], 10, 2);
 add_action('template_redirect', [Routes::class, 'resolve']);
 add_filter('query_vars', static fn(array $vars): array => array_merge($vars, ['s101_path', 's101_category', 's101_onsite']));
+foreach (['admin_post_s101_request','admin_post_nopriv_s101_request'] as $hook) {
+    add_action($hook,static function(){ require __DIR__.'/includes/forms-handler.php'; });
+}

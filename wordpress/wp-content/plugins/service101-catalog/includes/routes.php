@@ -14,9 +14,9 @@ final class Routes
         register_post_type('s101_device',['labels'=>['name'=>'Устройства','singular_name'=>'Устройство'],'public'=>true,'show_ui'=>false,'show_in_rest'=>false,'exclude_from_search'=>false,'supports'=>['title','editor','thumbnail'],'rewrite'=>false,'has_archive'=>false]);
         register_taxonomy('s101_category','s101_device',['label'=>'Категории устройств','public'=>false,'show_ui'=>false,'rewrite'=>false]);
         register_taxonomy('s101_brand','s101_device',['label'=>'Бренды','public'=>false,'show_ui'=>false,'rewrite'=>false]);
-        add_rewrite_rule('^remont/vyezdnoj-remont/(?:index\.html)?$','index.php?s101_onsite=1','top');
-        add_rewrite_rule('^remont/([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)/(?:index\.html)?$','index.php?s101_path=$matches[1]/$matches[2]/$matches[3]','top');
-        add_rewrite_rule('^remont/([a-z0-9-]+)/(?:index\.html)?$','index.php?s101_category=$matches[1]','top');
+        add_rewrite_rule('^remont/vyezdnoj-remont(?:/index\.html)?/?$','index.php?s101_onsite=1','top');
+        add_rewrite_rule('^remont/([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)(?:/index\.html)?/?$','index.php?s101_path=$matches[1]/$matches[2]/$matches[3]','top');
+        add_rewrite_rule('^remont/([a-z0-9-]+)(?:/index\.html)?/?$','index.php?s101_category=$matches[1]','top');
         add_rewrite_rule('^b2b/index\.html$','index.php?pagename=b2b','top');
     }
     public static function permalink(string $link, \WP_Post $post): string
@@ -44,7 +44,7 @@ final class Routes
         status_header(200);
         if (self::$device['publication']!=='Опубликовать') { nocache_headers(); header('X-Robots-Tag: noindex, nofollow'); }
         $canonical=home_url($path ? self::$device['path'] : ($onsite?'/remont/vyezdnoj-remont/':'/remont/'.$category.'/'));
-        if (str_ends_with((string)wp_parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH),'index.html')) { wp_safe_redirect($canonical,301); exit; }
+        if (wp_parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH)!==wp_parse_url($canonical,PHP_URL_PATH)) { wp_safe_redirect($canonical,301); exit; }
         remove_action('template_redirect','redirect_canonical');
         add_filter('template_include',static fn()=>get_stylesheet_directory().'/catalog.php');
     }

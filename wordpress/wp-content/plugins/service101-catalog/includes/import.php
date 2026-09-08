@@ -45,7 +45,7 @@ final class Import
     public static function code(string $code): string
     {
         if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/D',$code)) { throw new \InvalidArgumentException('Код обязателен: латинские буквы, цифры, дефис или подчёркивание, до 64 символов.'); }
-        return $code;
+        return strtoupper($code);
     }
     private static function merge(array $row, ?array $before, array $keys): array
     {
@@ -60,6 +60,7 @@ final class Import
     public static function device(array $row, ?array $before): array
     {
         $data=self::merge($row,$before,Workbook::DEVICE_KEYS);
+        $data['code']=self::code($data['code']??'');
         foreach (['code','name','category','brand'] as $required) { if (empty($data[$required])) { throw new \InvalidArgumentException('Не заполнено обязательное поле «'.$required.'».'); } }
         $data['publication']=$data['publication']?:'Черновик';
         if (!in_array($data['publication'],['Черновик','Опубликовать','Скрыть'],true)) { throw new \InvalidArgumentException('Неизвестное состояние публикации.'); }
@@ -77,6 +78,7 @@ final class Import
         $data['path']=$path;
         foreach (['image1','image2','image3'] as $key) {
             $url=str_replace(' ','%20',$data[$key]??'');
+            if ($before && !empty($before[$key.'_id']) && $url===wp_get_attachment_url((int)$before[$key.'_id'])) { $url=$before[$key]??''; }
             $data[$key]=$url;
             if ($url!=='' && (!filter_var($url,FILTER_VALIDATE_URL) && !preg_match('~^https://[^\s]+$~u',$url))) { throw new \InvalidArgumentException('Нужна полная HTTPS-ссылка на изображение.'); }
             if ($url!=='' && strtolower((string)wp_parse_url($url,PHP_URL_SCHEME))!=='https') { throw new \InvalidArgumentException('Для изображений разрешён только HTTPS.'); }
@@ -86,6 +88,8 @@ final class Import
     public static function price(array $row, ?array $before): array
     {
         $data=self::merge($row,$before,array_values(array_diff(Workbook::PRICE_KEYS,['device_name'])));
+        $data['device_code']=self::code($data['device_code']??'');
+        $data['service_code']=self::code($data['service_code']??'');
         if (empty($data['name'])) { throw new \InvalidArgumentException('Название услуги обязательно.'); }
         if (mb_strlen($data['name'])>240) { throw new \InvalidArgumentException('Название услуги длиннее 240 символов.'); }
         foreach (['work'=>['Фиксированная','От','Бесплатно','По запросу'],'total'=>['Фиксированная','Ориентир','От','Бесплатно','После диагностики']] as $part=>$allowed) {
@@ -198,6 +202,7 @@ final class Import
         global $wpdb;
         $batch=self::batch($id);
         if ($batch['state']!=='applied' || !$batch['snapshot']) { throw new \RuntimeException('Этот пакет нельзя восстановить.'); }
+        if (!current_user_can('manage_s101_prices') || !current_user_can('publish_s101_devices')) { throw new \RuntimeException('Для восстановления каталога нужны права изменения цен и публикации.'); }
         Catalog::assert_db($wpdb->query('START TRANSACTION'));
         try {
             $revision=(int)$wpdb->get_var('SELECT revision FROM '.Catalog::table('state').' WHERE id=1 FOR UPDATE');
