@@ -19,7 +19,7 @@ const ref=context.reference;
 const copy=JSON.parse(JSON.stringify({categories:ref.categoryCopy,info:ref.deviceInfoCopy}));
 copy.icons=Object.fromEntries(Object.keys(copy.categories).map(slug=>[slug,ref.tabIcon(slug)]));
 await fs.writeFile(path.join(theme,'reference/copy.json'),JSON.stringify(copy,null,2));
-await fs.writeFile(path.join(theme,'reference/contact.html'),normalize(ref.renderContactSection()));
+await fs.writeFile(path.join(theme,'reference/contact.html'),normalize(ref.renderContactSection()).trimEnd()+'\n');
 script=script.replace('const formEndpoint = `${root}/api/send-request.php`;','const formEndpoint = pageState.formEndpoint || `${root}/api/send-request.php`;');
 script=script.replace('async function loadCatalog() {',`async function loadCatalog() {
     if (pageState.serverRendered) {
