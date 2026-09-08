@@ -1,0 +1,8 @@
+{
+  "name": "service101/catalog",
+  "description": "Каталог устройств и импорт Excel для Сервис 101",
+  "type": "wordpress-plugin",
+  "require": {"php": ">=8.3", "phpoffice/phpspreadsheet": "^5.9"},
+  "config": {"sort-packages": true, "allow-plugins": false},
+  "license": "proprietary"
+}

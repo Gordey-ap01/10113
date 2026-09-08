@@ -17,3 +17,7 @@ wp-content/backups/
 *.pem
 *.key
 *.local.md
+wordpress/**/vendor/
+wordpress/build/
+wordpress/.runtime/
+wordpress/**/originals/
