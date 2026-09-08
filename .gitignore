@@ -2,3 +2,18 @@
 .production-build/
 10113-production.zip
 10113-production.tar.gz
+
+# WordPress migration: instance data and credentials stay outside Git.
+.env
+.env.*
+!.env.example
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backups/
+*.sql
+*.sql.gz
+*.pem
+*.key
+*.local.md

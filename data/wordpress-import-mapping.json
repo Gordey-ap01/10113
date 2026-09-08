@@ -1,0 +1,684 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "a41a4a538f87074f55e3e7b533ffd45056789351",
+  "devices": [
+    {
+      "code": "D0001",
+      "url": "remont/telefony/apple/iphone-17-pro-max/"
+    },
+    {
+      "code": "D0002",
+      "url": "remont/telefony/apple/iphone-17-pro/"
+    },
+    {
+      "code": "D0003",
+      "url": "remont/telefony/apple/iphone-17/"
+    },
+    {
+      "code": "D0004",
+      "url": "remont/telefony/apple/iphone-16-pro-max/"
+    },
+    {
+      "code": "D0005",
+      "url": "remont/telefony/apple/iphone-16-pro/"
+    },
+    {
+      "code": "D0006",
+      "url": "remont/telefony/apple/iphone-16-plus/"
+    },
+    {
+      "code": "D0007",
+      "url": "remont/telefony/apple/iphone-16/"
+    },
+    {
+      "code": "D0008",
+      "url": "remont/telefony/apple/iphone-15-pro-max/"
+    },
+    {
+      "code": "D0009",
+      "url": "remont/telefony/apple/iphone-15-pro/"
+    },
+    {
+      "code": "D0010",
+      "url": "remont/telefony/apple/iphone-15-plus/"
+    },
+    {
+      "code": "D0011",
+      "url": "remont/telefony/apple/iphone-15/"
+    },
+    {
+      "code": "D0012",
+      "url": "remont/telefony/apple/iphone-14-pro-max/"
+    },
+    {
+      "code": "D0013",
+      "url": "remont/telefony/apple/iphone-14-pro/"
+    },
+    {
+      "code": "D0014",
+      "url": "remont/telefony/apple/iphone-14-plus/"
+    },
+    {
+      "code": "D0015",
+      "url": "remont/telefony/apple/iphone-14/"
+    },
+    {
+      "code": "D0016",
+      "url": "remont/telefony/apple/iphone-13-pro-max/"
+    },
+    {
+      "code": "D0017",
+      "url": "remont/telefony/apple/iphone-13-pro/"
+    },
+    {
+      "code": "D0018",
+      "url": "remont/telefony/apple/iphone-13/"
+    },
+    {
+      "code": "D0019",
+      "url": "remont/telefony/apple/iphone-13-mini/"
+    },
+    {
+      "code": "D0020",
+      "url": "remont/telefony/apple/iphone-12-pro-max/"
+    },
+    {
+      "code": "D0021",
+      "url": "remont/telefony/apple/iphone-12-pro/"
+    },
+    {
+      "code": "D0022",
+      "url": "remont/telefony/apple/iphone-12/"
+    },
+    {
+      "code": "D0023",
+      "url": "remont/telefony/apple/iphone-11-pro-max/"
+    },
+    {
+      "code": "D0024",
+      "url": "remont/telefony/apple/iphone-11-pro/"
+    },
+    {
+      "code": "D0025",
+      "url": "remont/telefony/apple/iphone-11/"
+    },
+    {
+      "code": "D0026",
+      "url": "remont/telefony/apple/iphone-se-2/"
+    },
+    {
+      "code": "D0027",
+      "url": "remont/telefony/apple/iphone-se/"
+    },
+    {
+      "code": "D0028",
+      "url": "remont/telefony/apple/iphone-xr/"
+    },
+    {
+      "code": "D0029",
+      "url": "remont/telefony/apple/iphone-xs-max/"
+    },
+    {
+      "code": "D0030",
+      "url": "remont/telefony/apple/iphone-xs/"
+    },
+    {
+      "code": "D0031",
+      "url": "remont/telefony/apple/iphone-x/"
+    },
+    {
+      "code": "D0032",
+      "url": "remont/telefony/apple/iphone-8-plus/"
+    },
+    {
+      "code": "D0033",
+      "url": "remont/telefony/apple/iphone-8/"
+    },
+    {
+      "code": "D0034",
+      "url": "remont/telefony/apple/iphone-7-plus/"
+    },
+    {
+      "code": "D0035",
+      "url": "remont/telefony/apple/iphone-7/"
+    },
+    {
+      "code": "D0036",
+      "url": "remont/telefony/samsung/galaxy-s25-ultra/"
+    },
+    {
+      "code": "D0037",
+      "url": "remont/telefony/samsung/galaxy-s24-ultra/"
+    },
+    {
+      "code": "D0038",
+      "url": "remont/telefony/samsung/galaxy-s24/"
+    },
+    {
+      "code": "D0039",
+      "url": "remont/telefony/samsung/galaxy-s23-ultra/"
+    },
+    {
+      "code": "D0040",
+      "url": "remont/telefony/samsung/galaxy-s23/"
+    },
+    {
+      "code": "D0041",
+      "url": "remont/telefony/samsung/galaxy-s22-ultra/"
+    },
+    {
+      "code": "D0042",
+      "url": "remont/telefony/samsung/galaxy-s22/"
+    },
+    {
+      "code": "D0043",
+      "url": "remont/telefony/samsung/galaxy-s21-ultra/"
+    },
+    {
+      "code": "D0044",
+      "url": "remont/telefony/samsung/galaxy-s21/"
+    },
+    {
+      "code": "D0045",
+      "url": "remont/telefony/samsung/galaxy-a55/"
+    },
+    {
+      "code": "D0046",
+      "url": "remont/telefony/samsung/galaxy-a54/"
+    },
+    {
+      "code": "D0047",
+      "url": "remont/telefony/samsung/galaxy-a53/"
+    },
+    {
+      "code": "D0048",
+      "url": "remont/telefony/samsung/galaxy-a52/"
+    },
+    {
+      "code": "D0049",
+      "url": "remont/telefony/samsung/galaxy-a51/"
+    },
+    {
+      "code": "D0050",
+      "url": "remont/telefony/samsung/galaxy-a50/"
+    },
+    {
+      "code": "D0051",
+      "url": "remont/telefony/samsung/galaxy-a35/"
+    },
+    {
+      "code": "D0052",
+      "url": "remont/telefony/samsung/galaxy-a34/"
+    },
+    {
+      "code": "D0053",
+      "url": "remont/telefony/samsung/galaxy-a33/"
+    },
+    {
+      "code": "D0054",
+      "url": "remont/telefony/samsung/galaxy-a32/"
+    },
+    {
+      "code": "D0055",
+      "url": "remont/telefony/samsung/galaxy-a25/"
+    },
+    {
+      "code": "D0056",
+      "url": "remont/telefony/samsung/galaxy-a24/"
+    },
+    {
+      "code": "D0057",
+      "url": "remont/telefony/samsung/galaxy-a23/"
+    },
+    {
+      "code": "D0058",
+      "url": "remont/telefony/samsung/galaxy-a22/"
+    },
+    {
+      "code": "D0059",
+      "url": "remont/telefony/samsung/galaxy-a15/"
+    },
+    {
+      "code": "D0060",
+      "url": "remont/telefony/samsung/galaxy-a14/"
+    },
+    {
+      "code": "D0061",
+      "url": "remont/telefony/samsung/galaxy-a13/"
+    },
+    {
+      "code": "D0062",
+      "url": "remont/telefony/samsung/galaxy-a12/"
+    },
+    {
+      "code": "D0063",
+      "url": "remont/telefony/samsung/galaxy-a10/"
+    },
+    {
+      "code": "D0064",
+      "url": "remont/telefony/samsung/galaxy-note-20-ultra/"
+    },
+    {
+      "code": "D0065",
+      "url": "remont/telefony/samsung/galaxy-note-10/"
+    },
+    {
+      "code": "D0066",
+      "url": "remont/telefony/samsung/galaxy-z-flip/"
+    },
+    {
+      "code": "D0067",
+      "url": "remont/telefony/samsung/galaxy-z-fold-4/"
+    },
+    {
+      "code": "D0068",
+      "url": "remont/telefony/honor/honor-90/"
+    },
+    {
+      "code": "D0069",
+      "url": "remont/telefony/honor/honor-70/"
+    },
+    {
+      "code": "D0070",
+      "url": "remont/telefony/honor/honor-x8/"
+    },
+    {
+      "code": "D0071",
+      "url": "remont/telefony/xiaomi/xiaomi-14/"
+    },
+    {
+      "code": "D0072",
+      "url": "remont/telefony/xiaomi/xiaomi-13/"
+    },
+    {
+      "code": "D0073",
+      "url": "remont/telefony/xiaomi/redmi-note-13/"
+    },
+    {
+      "code": "D0074",
+      "url": "remont/telefony/huawei/p60-pro/"
+    },
+    {
+      "code": "D0075",
+      "url": "remont/telefony/huawei/nova-11/"
+    },
+    {
+      "code": "D0076",
+      "url": "remont/telefony/poco/poco-x6/"
+    },
+    {
+      "code": "D0077",
+      "url": "remont/telefony/poco/poco-f5/"
+    },
+    {
+      "code": "D0078",
+      "url": "remont/telefony/realme/realme-12/"
+    },
+    {
+      "code": "D0079",
+      "url": "remont/telefony/vivo/vivo-v29/"
+    },
+    {
+      "code": "D0080",
+      "url": "remont/telefony/nokia/nokia-g22/"
+    },
+    {
+      "code": "D0081",
+      "url": "remont/telefony/sony/xperia-1-v/"
+    },
+    {
+      "code": "D0082",
+      "url": "remont/noutbuki/acer/acer-aspire/"
+    },
+    {
+      "code": "D0083",
+      "url": "remont/noutbuki/acer/acer-nitro/"
+    },
+    {
+      "code": "D0084",
+      "url": "remont/noutbuki/apple/macbook-air/"
+    },
+    {
+      "code": "D0085",
+      "url": "remont/noutbuki/apple/macbook-pro/"
+    },
+    {
+      "code": "D0086",
+      "url": "remont/noutbuki/dell/dell-inspiron/"
+    },
+    {
+      "code": "D0087",
+      "url": "remont/noutbuki/dell/dell-latitude/"
+    },
+    {
+      "code": "D0088",
+      "url": "remont/noutbuki/hp/hp-pavilion/"
+    },
+    {
+      "code": "D0089",
+      "url": "remont/noutbuki/hp/hp-omen/"
+    },
+    {
+      "code": "D0090",
+      "url": "remont/noutbuki/lenovo/lenovo-ideapad/"
+    },
+    {
+      "code": "D0091",
+      "url": "remont/noutbuki/lenovo/lenovo-legion/"
+    },
+    {
+      "code": "D0092",
+      "url": "remont/noutbuki/asus/asus-vivobook/"
+    },
+    {
+      "code": "D0093",
+      "url": "remont/noutbuki/asus/asus-rog/"
+    },
+    {
+      "code": "D0094",
+      "url": "remont/noutbuki/msi/msi-gf/"
+    },
+    {
+      "code": "D0095",
+      "url": "remont/noutbuki/huawei/huawei-matebook/"
+    },
+    {
+      "code": "D0096",
+      "url": "remont/pristavki/playstation/ps5/"
+    },
+    {
+      "code": "D0097",
+      "url": "remont/pristavki/playstation/ps4-pro/"
+    },
+    {
+      "code": "D0098",
+      "url": "remont/pristavki/playstation/ps4/"
+    },
+    {
+      "code": "D0099",
+      "url": "remont/pristavki/playstation/ps3/"
+    },
+    {
+      "code": "D0100",
+      "url": "remont/pristavki/xbox/xbox-series-x/"
+    },
+    {
+      "code": "D0101",
+      "url": "remont/pristavki/xbox/xbox-series-s/"
+    },
+    {
+      "code": "D0102",
+      "url": "remont/pristavki/xbox/xbox-one/"
+    },
+    {
+      "code": "D0103",
+      "url": "remont/pristavki/nintendo/switch-oled/"
+    },
+    {
+      "code": "D0104",
+      "url": "remont/pristavki/nintendo/switch/"
+    },
+    {
+      "code": "D0105",
+      "url": "remont/kompyutery/sistemnye-bloki/pc-office/"
+    },
+    {
+      "code": "D0106",
+      "url": "remont/kompyutery/sistemnye-bloki/pc-gaming/"
+    },
+    {
+      "code": "D0107",
+      "url": "remont/kompyutery/monobloki/imac-pc/"
+    },
+    {
+      "code": "D0108",
+      "url": "remont/videokarty/nvidia/rtx-4090/"
+    },
+    {
+      "code": "D0109",
+      "url": "remont/videokarty/nvidia/rtx-4080/"
+    },
+    {
+      "code": "D0110",
+      "url": "remont/videokarty/nvidia/rtx-4070/"
+    },
+    {
+      "code": "D0111",
+      "url": "remont/videokarty/nvidia/rtx-3060/"
+    },
+    {
+      "code": "D0112",
+      "url": "remont/videokarty/amd/rx-7900/"
+    },
+    {
+      "code": "D0113",
+      "url": "remont/videokarty/amd/rx-6800/"
+    },
+    {
+      "code": "D0114",
+      "url": "remont/gejmpady/sony/dualsense/"
+    },
+    {
+      "code": "D0115",
+      "url": "remont/gejmpady/sony/dualshock-4/"
+    },
+    {
+      "code": "D0116",
+      "url": "remont/gejmpady/microsoft/xbox-controller/"
+    },
+    {
+      "code": "D0117",
+      "url": "remont/gejmpady/nintendo/joy-con/"
+    }
+  ],
+  "services": [
+    {
+      "code": "S001",
+      "name": "Диагностика"
+    },
+    {
+      "code": "S002",
+      "name": "Замена аккумулятора"
+    },
+    {
+      "code": "S003",
+      "name": "Замена стекла"
+    },
+    {
+      "code": "S004",
+      "name": "Замена экрана"
+    },
+    {
+      "code": "S005",
+      "name": "Гидрогелевая защита"
+    },
+    {
+      "code": "S006",
+      "name": "Замена задней крышки"
+    },
+    {
+      "code": "S007",
+      "name": "Чистка динамика, микрофонов от пыли"
+    },
+    {
+      "code": "S008",
+      "name": "Замена корпуса"
+    },
+    {
+      "code": "S009",
+      "name": "Замена разъема зарядки"
+    },
+    {
+      "code": "S010",
+      "name": "Замена динамика"
+    },
+    {
+      "code": "S011",
+      "name": "Замена микрофона"
+    },
+    {
+      "code": "S012",
+      "name": "Замена задней камеры"
+    },
+    {
+      "code": "S013",
+      "name": "Восстановление после попадания влаги"
+    },
+    {
+      "code": "S014",
+      "name": "Замена стекла камеры"
+    },
+    {
+      "code": "S015",
+      "name": "Обновление ПО"
+    },
+    {
+      "code": "S016",
+      "name": "Перенос данных"
+    },
+    {
+      "code": "S017",
+      "name": "Активация и настройка Apple ID"
+    },
+    {
+      "code": "S018",
+      "name": "Замена передней камеры"
+    },
+    {
+      "code": "S019",
+      "name": "Замена кнопок громкости"
+    },
+    {
+      "code": "S020",
+      "name": "Замена кнопки включения"
+    },
+    {
+      "code": "S021",
+      "name": "Программный ремонт"
+    },
+    {
+      "code": "S022",
+      "name": "Сброс пароля"
+    },
+    {
+      "code": "S023",
+      "name": "Ремонт материнской платы"
+    },
+    {
+      "code": "S024",
+      "name": "Ремонт FACE ID"
+    },
+    {
+      "code": "S025",
+      "name": "Замена антенны"
+    },
+    {
+      "code": "S026",
+      "name": "Замена вибромотора"
+    },
+    {
+      "code": "S027",
+      "name": "Замена датчика приближения"
+    },
+    {
+      "code": "S028",
+      "name": "Снятие пароля"
+    },
+    {
+      "code": "S029",
+      "name": "Перепрошивка"
+    },
+    {
+      "code": "S030",
+      "name": "Замена сканера отпечатка"
+    },
+    {
+      "code": "S031",
+      "name": "Замена Wi-Fi модуля"
+    },
+    {
+      "code": "S032",
+      "name": "Восстановление после влаги"
+    },
+    {
+      "code": "S033",
+      "name": "Чистка системы охлаждения и замена термопасты"
+    },
+    {
+      "code": "S034",
+      "name": "Чистка от пыли"
+    },
+    {
+      "code": "S035",
+      "name": "Установка Windows"
+    },
+    {
+      "code": "S036",
+      "name": "Установка драйверов"
+    },
+    {
+      "code": "S037",
+      "name": "Замена клавиатуры"
+    },
+    {
+      "code": "S038",
+      "name": "Замена матрицы"
+    },
+    {
+      "code": "S039",
+      "name": "Замена жесткого диска"
+    },
+    {
+      "code": "S040",
+      "name": "Замена HDD на SSD"
+    },
+    {
+      "code": "S041",
+      "name": "Замена оперативной памяти"
+    },
+    {
+      "code": "S042",
+      "name": "Чистка и замена термопасты"
+    },
+    {
+      "code": "S043",
+      "name": "Ремонт платы (пайка)"
+    },
+    {
+      "code": "S044",
+      "name": "Замена разъёма"
+    },
+    {
+      "code": "S045",
+      "name": "Чистка после попадания жидкости"
+    },
+    {
+      "code": "S046",
+      "name": "Ремонт платы"
+    },
+    {
+      "code": "S047",
+      "name": "Сборка ПК"
+    },
+    {
+      "code": "S048",
+      "name": "Замена блока питания"
+    },
+    {
+      "code": "S049",
+      "name": "Замена системы охлаждения"
+    },
+    {
+      "code": "S050",
+      "name": "Замена стиков"
+    },
+    {
+      "code": "S051",
+      "name": "Замена кнопок"
+    },
+    {
+      "code": "S052",
+      "name": "Ремонт триггеров"
+    }
+  ]
+}

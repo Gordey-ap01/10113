@@ -1,5 +1,10 @@
 # 10113
 
+This branch prepares the WordPress migration from production commit `a41a4a5`.
+The existing site and hidden catalog are the design reference. WordPress is not installed yet.
+See [the migration plan](docs/wordpress-migration.md) for the rationale, architecture,
+staging requirements and acceptance criteria.
+
 Service 101 concept with a blue navigation header, responsive repair catalog, B2B page,
 stable service counters, booking forms, an on-site technician request flow, payment methods,
 category-specific repair guidance, repair status widget and review platform summaries.
