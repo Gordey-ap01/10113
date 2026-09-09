@@ -26,7 +26,12 @@ final class Routes
         $path=$wpdb->get_var($wpdb->prepare('SELECT path FROM '.Catalog::table('devices').' WHERE post_id=%d',$post->ID));
         return $path ? home_url($path) : $link;
     }
-    public static function can_preview(): bool { return is_user_logged_in() && current_user_can('manage_s101_catalog'); }
+    public static function can_preview(): bool
+    {
+        // Public review is an explicit staging setting; it never publishes the devices.
+        return (wp_get_environment_type()==='staging' && (bool)get_option('s101_public_catalog_preview',false))
+            || (is_user_logged_in() && current_user_can('manage_s101_catalog'));
+    }
     public static function resolve(): void
     {
         $path=(string)get_query_var('s101_path'); $category=(string)get_query_var('s101_category'); $onsite=(bool)get_query_var('s101_onsite');
