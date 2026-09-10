@@ -34,6 +34,73 @@ final class Catalog
 
     public static function revision(): int { global $wpdb; return (int)$wpdb->get_var('SELECT revision FROM ' . self::table('state') . ' WHERE id=1'); }
 
+    /** Native WordPress terms are the single directory for categories and brands. */
+    public static function terms(string $taxonomy): array
+    {
+        if (!in_array($taxonomy,['s101_category','s101_brand'],true)) { throw new \InvalidArgumentException('Неизвестный справочник.'); }
+        $terms=get_terms(['taxonomy'=>$taxonomy,'hide_empty'=>false,'orderby'=>'name','order'=>'ASC']);
+        if (is_wp_error($terms)) { throw new \RuntimeException('Не удалось прочитать справочник.'); }
+        return $terms;
+    }
+
+    public static function term_by_slug(string $taxonomy,string $slug): ?\WP_Term
+    {
+        $term=get_term_by('slug',$slug,$taxonomy);
+        return $term instanceof \WP_Term ? $term : null;
+    }
+
+    /** Creates a term or updates its editor-owned presentation settings. Slugs stay stable after creation. */
+    public static function save_term(string $taxonomy,array $input): \WP_Term
+    {
+        if (!in_array($taxonomy,['s101_category','s101_brand'],true)) { throw new \InvalidArgumentException('Неизвестный справочник.'); }
+        $id=absint($input['term_id']??0); $name=sanitize_text_field((string)($input['name']??''));
+        if ($name==='') { throw new \InvalidArgumentException('Введите название.'); }
+        if (mb_strlen($name)>120) { throw new \InvalidArgumentException('Название длиннее 120 символов.'); }
+        if ($id) {
+            $term=get_term($id,$taxonomy);
+            if (!$term instanceof \WP_Term) { throw new \InvalidArgumentException('Элемент справочника не найден.'); }
+            $saved=wp_update_term($id,$taxonomy,['name'=>$name]);
+        } else {
+            $slug=self::slug((string)($input['slug']??$name));
+            if ($slug==='' || self::term_by_slug($taxonomy,$slug)) { throw new \InvalidArgumentException('Такой постоянный адрес уже занят.'); }
+            $saved=wp_insert_term($name,$taxonomy,['slug'=>$slug]);
+        }
+        if (is_wp_error($saved)) { throw new \RuntimeException($saved->get_error_message()); }
+        $term=get_term((int)$saved['term_id'],$taxonomy);
+        if (!$term instanceof \WP_Term) { throw new \RuntimeException('Не удалось сохранить справочник.'); }
+        foreach (['sort_order'=>'absint','home_enabled'=>static fn($v)=>$v==='1'?'1':'0','home_image_id'=>'absint','catalog_title'=>'sanitize_text_field','catalog_subtitle'=>'sanitize_text_field','catalog_intro'=>'sanitize_textarea_field','info_title'=>'sanitize_text_field','info_text'=>'sanitize_textarea_field','info_items'=>'sanitize_textarea_field'] as $key=>$sanitize) {
+            if (array_key_exists($key,$input)) { update_term_meta($term->term_id,'s101_'.$key,$sanitize($input[$key])); }
+        }
+        return $term;
+    }
+
+    public static function category(string $slug): array
+    {
+        $term=self::term_by_slug('s101_category',$slug);
+        $fallback=['title'=>'Ремонт техники','subtitle'=>'Услуги и цены','intro'=>'Выберите модель, чтобы увидеть актуальные услуги и цены.','info_title'=>'Перед ремонтом','info_text'=>'Мастер уточнит неисправность и согласует работы до начала ремонта.','info_items'=>['Диагностика перед сложным ремонтом','Стоимость подтверждаем до начала работ'],'home_enabled'=>false,'home_image_id'=>0,'sort_order'=>1000];
+        if (!$term) { return $fallback+['slug'=>$slug,'name'=>$slug]; }
+        $copy=function_exists('s101_copy')?s101_copy():[];
+        $legacy=$copy['categories'][$slug]??[]; $legacy_info=$copy['info'][$slug]??[];
+        $value=static fn(string $key,mixed $default='')=>get_term_meta($term->term_id,'s101_'.$key,true)?:$default;
+        $items=preg_split('/\R/u',(string)$value('info_items',''));
+        $items=array_values(array_filter(array_map('trim',$items)));
+        return ['term_id'=>(int)$term->term_id,'slug'=>$term->slug,'name'=>$term->name,
+            'title'=>$value('catalog_title',$legacy['title']??$term->name),'subtitle'=>$value('catalog_subtitle',$legacy['subtitle']??$fallback['subtitle']),
+            'intro'=>$value('catalog_intro',$legacy['intro']??$fallback['intro']),'info_title'=>$value('info_title',$legacy_info['title']??$fallback['info_title']),
+            'info_text'=>$value('info_text',$legacy_info['text']??$fallback['info_text']),'info_items'=>$items?:($legacy_info['items']??$fallback['info_items']),
+            'home_enabled'=>$value('home_enabled',$legacy?'1':'0')==='1','home_image_id'=>(int)$value('home_image_id',0),'sort_order'=>(int)$value('sort_order',1000)];
+    }
+
+    public static function categories(bool $include_hidden=false): array
+    {
+        $device_categories=[];
+        foreach (self::devices($include_hidden) as $device) { $device_categories[$device['category_slug']]=true; }
+        $result=[];
+        foreach (self::terms('s101_category') as $term) { if (isset($device_categories[$term->slug])) { $result[$term->slug]=self::category($term->slug); } }
+        uasort($result,static fn($a,$b)=>($a['sort_order']<=>$b['sort_order']) ?: strnatcasecmp($a['title'],$b['title']));
+        return $result;
+    }
+
     public static function devices(bool $include_hidden = false): array
     {
         global $wpdb;

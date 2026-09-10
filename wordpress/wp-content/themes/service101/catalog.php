@@ -3,15 +3,13 @@ use Service101\Catalog;
 use Service101\Routes;
 $device=Routes::$device;
 if (!$device) { status_header(404); get_template_part('index'); return; }
-$copy=s101_copy(); $category=$copy['categories'][$device['category_slug']]??['title'=>$device['category'],'subtitle'=>'','intro'=>''];
-$info=$copy['info'][$device['category_slug']]??reset($copy['info']);
+$copy=s101_copy(); $category=Catalog::category($device['category_slug']);
+$info=['title'=>$category['info_title'],'text'=>$category['info_text'],'items'=>$category['info_items']];
 $devices=Catalog::devices(Routes::can_preview()); $prices=array_values(Catalog::prices($device['code'],false));
-$categories=[]; $brands=[]; $models=[];
+$categories=Catalog::categories(Routes::can_preview()); $brands=[]; $models=[];
 foreach ($devices as $row) {
-    $categories[$row['category_slug']]=$row['category'];
     if ($row['category_slug']===$device['category_slug']) { $brands[$row['brand_slug']]??=$row; if ($row['brand_slug']===$device['brand_slug']) { $models[]=$row; } }
 }
-$categories=array_replace(array_intersect_key(array_map(static fn($item)=>$item['title'],$copy['categories']),$categories),$categories);
 $title=s101_device_name($device); $image=!empty($device['image1_id'])?wp_get_attachment_image_url($device['image1_id'],'large'):'';
 get_header();
 ?>
@@ -20,8 +18,8 @@ get_header();
   <div class="category-scroller" data-category-scroller>
     <button class="category-scroller__button category-scroller__button--prev" type="button" aria-label="Предыдущие категории">‹</button>
     <div class="catalog-tabs" data-category-row data-horizontal-scroll>
-      <?php foreach ($categories as $slug=>$label): ?>
-      <a class="tab tab--<?php echo esc_attr($slug); ?> <?php echo $slug===$device['category_slug']?'active':''; ?>" href="<?php echo esc_url(home_url('/remont/'.$slug.'/')); ?>"><span class="tab-icon tab-icon--<?php echo esc_attr($slug); ?>" aria-hidden="true"><?php echo $copy['icons'][$slug]??$copy['icons']['kompyutery']; ?></span><span><?php echo esc_html($slug==='pristavki'?'Приставки и консоли':$label); ?></span></a>
+      <?php foreach ($categories as $slug=>$item): ?>
+      <a class="tab tab--<?php echo esc_attr($slug); ?> <?php echo $slug===$device['category_slug']?'active':''; ?>" href="<?php echo esc_url(home_url('/remont/'.$slug.'/')); ?>"><span class="tab-icon tab-icon--<?php echo esc_attr($slug); ?>" aria-hidden="true"><?php echo $copy['icons'][$slug]??$copy['icons']['kompyutery']; ?></span><span><?php echo esc_html($item['title']); ?></span></a>
       <?php endforeach; ?>
     </div>
     <button class="category-scroller__button category-scroller__button--next" type="button" aria-label="Следующие категории">›</button>

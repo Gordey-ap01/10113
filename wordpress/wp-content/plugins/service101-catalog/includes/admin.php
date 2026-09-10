@@ -9,6 +9,8 @@ final class Admin
     {
         add_menu_page('Каталог Сервис 101','Каталог','manage_s101_catalog','s101-catalog',[self::class,'page'],'dashicons-smartphone',21);
         add_submenu_page('s101-catalog','Устройства','Устройства','manage_s101_catalog','s101-catalog',[self::class,'page']);
+        add_submenu_page('s101-catalog','Категории','Категории','manage_s101_catalog','s101-categories',[self::class,'page']);
+        add_submenu_page('s101-catalog','Бренды','Бренды','manage_s101_catalog','s101-brands',[self::class,'page']);
         add_submenu_page('s101-catalog','Импорт Excel','Импорт Excel','import_s101_catalog','s101-import',[self::class,'page']);
         add_submenu_page('s101-catalog','История изменений','История изменений','manage_s101_catalog','s101-history',[self::class,'page']);
     }
@@ -33,6 +35,13 @@ final class Admin
             } elseif ($operation==='export') {
                 $temp=wp_tempnam('service101-export'); Workbook::export($temp);
                 nocache_headers(); header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); header('Content-Disposition: attachment; filename="service101-catalog-'.gmdate('Y-m-d').'.xlsx"'); header('Content-Length: '.filesize($temp)); readfile($temp); wp_delete_file($temp); exit;
+            } elseif (in_array($operation,['save_category','save_brand'],true)) {
+                $taxonomy=$operation==='save_category'?'s101_category':'s101_brand';
+                $term_input=wp_unslash($_POST['term']??[]);
+                if (!is_array($term_input)) { throw new \RuntimeException('Некорректная форма справочника.'); }
+                if ($taxonomy==='s101_category' && !isset($term_input['home_enabled'])) { $term_input['home_enabled']='0'; }
+                $term=Catalog::save_term($taxonomy,$term_input);
+                wp_safe_redirect(self::url(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','saved'=>$term->term_id])); exit;
             } elseif ($operation==='save') {
                 $device=wp_unslash($_POST['device']??[]); $rows=wp_unslash($_POST['prices']??[]);
                 if (!is_array($device) || !is_array($rows) || count($rows)>100) { throw new \RuntimeException('Некорректная форма устройства.'); }
@@ -56,6 +65,8 @@ final class Admin
             if (isset($_GET['batch'])) { self::report(absint($_GET['batch'])); }
             elseif (isset($_GET['edit'])) { self::editor(sanitize_text_field(wp_unslash($_GET['edit']))); }
             elseif (($_GET['page']??'')==='s101-import') { self::upload(); }
+            elseif (($_GET['page']??'')==='s101-categories') { self::terms('s101_category'); }
+            elseif (($_GET['page']??'')==='s101-brands') { self::terms('s101_brand'); }
             elseif (($_GET['page']??'')==='s101-history') { self::history(); }
             else { self::listing(); }
         } catch (\Throwable $error) { echo '<div class="notice notice-error"><p>'.esc_html($error->getMessage()).'</p></div>'; }
@@ -68,6 +79,31 @@ final class Admin
         $counts=[]; foreach (Catalog::prices() as $price) { $counts[$price['device_code']]=($counts[$price['device_code']]??0)+1; }
         foreach (Catalog::devices(true) as $code=>$d) { echo '<tr><td>'.esc_html($code).'</td><td><a href="'.esc_url(self::url(['edit'=>$code])).'"><strong>'.esc_html($d['name']).'</strong></a></td><td>'.esc_html($d['category'].' / '.$d['brand']).'</td><td>'.esc_html($d['publication']).'</td><td>'.($counts[$code]??0).'</td><td><a href="'.esc_url(home_url($d['path'])).'" target="_blank" rel="noopener">Открыть</a></td></tr>'; }
         echo '</tbody></table><p>Черновики видны на сайте только вошедшему администратору каталога. Посетители получают 404.</p>';
+    }
+    private static function terms(string $taxonomy): void
+    {
+        $is_category=$taxonomy==='s101_category'; $label=$is_category?'Категория':'Бренд';
+        $editing=absint($_GET['edit_term']??0); $term=$editing?get_term($editing,$taxonomy):null;
+        if ($editing && !$term instanceof \WP_Term) { throw new \RuntimeException('Элемент справочника не найден.'); }
+        $data=$term instanceof \WP_Term ? ['term_id'=>$term->term_id,'name'=>$term->name,'slug'=>$term->slug] : [];
+        foreach (['sort_order','home_enabled','home_image_id','catalog_title','catalog_subtitle','catalog_intro','info_title','info_text','info_items'] as $key) { $data[$key]=$term?get_term_meta($term->term_id,'s101_'.$key,true):''; }
+        echo '<p>Справочник управляет вариантами в карточке устройства и каталогом. Адрес создаётся один раз и не меняется после появления моделей.</p>';
+        echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand');
+        echo '<input type="hidden" name="term[term_id]" value="'.absint($data['term_id']??0).'">';
+        self::field('term[name]','Название',$data['name']??''); self::field('term[slug]','Код адреса (латиницей, только при создании)',$data['slug']??'',[],(bool)$term);
+        self::field('term[sort_order]','Порядок показа',$data['sort_order']??'100');
+        if ($is_category) {
+            echo '<p><label><input type="checkbox" name="term[home_enabled]" value="1" '.checked($data['home_enabled']??'', '1',false).'> Показывать карточку категории на главной</label></p>';
+            self::field('term[catalog_title]','Заголовок в каталоге',$data['catalog_title']??''); self::field('term[catalog_subtitle]','Подзаголовок цен',$data['catalog_subtitle']??'');
+            echo '<label for="s101-term-catalog-intro">Короткое описание</label><textarea id="s101-term-catalog-intro" name="term[catalog_intro]" rows="3">'.esc_textarea($data['catalog_intro']??'').'</textarea>';
+            self::field('term[info_title]','Заголовок блока «Важно знать»',$data['info_title']??'');
+            echo '<label for="s101-term-info-text">Текст блока «Важно знать»</label><textarea id="s101-term-info-text" name="term[info_text]" rows="3">'.esc_textarea($data['info_text']??'').'</textarea>';
+            echo '<label for="s101-term-info-items">Пункты блока «Важно знать» — по одному на строку</label><textarea id="s101-term-info-items" name="term[info_items]" rows="4">'.esc_textarea($data['info_items']??'').'</textarea>';
+        }
+        submit_button($term?'Сохранить':'Создать '.$label); echo '</form></div>';
+        echo '<h2>Существующие '.($is_category?'категории':'бренды').'</h2><table class="widefat striped"><thead><tr><th>Название</th><th>Адрес</th><th>Модели</th><th></th></tr></thead><tbody>';
+        foreach (Catalog::terms($taxonomy) as $item) { $count=(int)$item->count; echo '<tr><td>'.esc_html($item->name).'</td><td><code>'.esc_html($item->slug).'</code></td><td>'.$count.'</td><td><a href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands','edit_term'=>$item->term_id])).'">Изменить</a></td></tr>'; }
+        echo '</tbody></table>';
     }
     private static function upload(): void
     {
