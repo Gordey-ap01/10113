@@ -490,6 +490,13 @@
         status.className = "form-submit-status is-success";
         status.textContent = payload.message || "Заявка отправлена. Мастер скоро свяжется с вами.";
       }
+      if (inferFormType(form) === "missing_device") {
+        const dialog = form.closest("dialog");
+        window.setTimeout(() => {
+          if (dialog?.open) dialog.close();
+          showSubmissionToast(payload.message || "Заявка принята. Мастер скоро свяжется с вами.");
+        }, 900);
+      }
     } catch (error) {
       if (status) {
         status.className = "form-submit-status is-error";
@@ -505,6 +512,20 @@
         button.textContent = originalLabel;
       }
     }
+  }
+
+  function showSubmissionToast(message) {
+    document.querySelectorAll(".submission-toast").forEach((toast) => toast.remove());
+    const toast = document.createElement("div");
+    toast.className = "submission-toast";
+    toast.setAttribute("role", "status");
+    toast.textContent = message;
+    document.body.append(toast);
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+      window.setTimeout(() => toast.remove(), 220);
+    }, 4200);
   }
 
   function ensureHiddenFormField(form, name, value) {
