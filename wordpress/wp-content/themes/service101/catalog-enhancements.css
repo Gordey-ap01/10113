@@ -1,0 +1,121 @@
+/* Catalog assistance shares the existing blue palette and compact geometry. */
+.catalog-help {
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--sky-200, #bae6fd);
+  border-radius: 12px;
+  background: var(--sky-50, #f0f9ff);
+}
+
+.catalog-help__content {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  justify-items: start;
+  gap: 12px;
+  padding: 20px;
+}
+
+.catalog-help__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--sky-200, #bae6fd);
+  border-radius: 10px;
+  background: var(--white, #fff);
+  color: var(--sky-700, #0369a1);
+}
+
+.catalog-help__icon svg { width: 28px; height: 28px; }
+
+.catalog-help__title {
+  margin: 0;
+  color: var(--slate-950, #020617);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+
+.catalog-help__text {
+  margin: 0;
+  color: var(--slate-600, #475569);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.catalog-help .catalog-help__button {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  white-space: normal;
+  text-align: left;
+}
+
+.catalog-help__button > span { flex-shrink: 0; font-size: 20px; line-height: 1; }
+
+.catalog-help__proof {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  border-top: 1px solid var(--sky-200, #bae6fd);
+  padding: 12px 20px;
+  color: var(--slate-600, #475569);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.catalog-help__proof strong { color: var(--sky-700, #0369a1); font-size: 17px; font-variant-numeric: tabular-nums; }
+.catalog-help__proof .brand-counter__brand { margin-left: 4px; }
+
+.missing-device-modal {
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  color: var(--slate-900, #0f172a);
+}
+
+.missing-device-modal:not([open]) { display: none; }
+.missing-device-modal::backdrop { background: rgba(224, 242, 254, .5); backdrop-filter: blur(18px); }
+.missing-device-modal .modal__head { padding: 24px; }
+.missing-device-modal .modal__head h2 { margin: 0; font-size: 26px; line-height: 1.15; letter-spacing: -.025em; }
+.missing-device-modal .modal__head .missing-device-modal__context { margin: 0 0 8px; color: var(--sky-700, #0369a1); font-size: 12px; font-weight: 700; }
+.missing-device-modal .modal__close { flex-shrink: 0; }
+.missing-device-form { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.missing-device-form .field-grid { gap: 16px; }
+.missing-device-form .field-optional { color: var(--slate-500, #64748b); font-size: 11px; font-weight: 400; }
+.missing-device-form .required-mark { color: var(--sky-700, #0369a1); }
+.missing-device-form > .btn { width: 100%; margin-top: 20px; }
+.missing-device-form .form-submit-status:empty { display: none; }
+.missing-device-form .form-footnote { margin: 12px 0 0; line-height: 1.5; }
+.catalog-help__button:focus-visible,
+.missing-device-modal button:focus-visible,
+.missing-device-modal .input:focus-visible { outline: 3px solid var(--sky-600, #0284c7); outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .selection-shell__main { grid-row: auto; }
+  .catalog-help { grid-row: auto; }
+  .catalog-help__content { grid-template-columns: 40px minmax(0, 1fr); gap: 8px 12px; padding: 16px; }
+  .catalog-help__icon { grid-row: 1 / 3; }
+  .catalog-help__title { align-self: end; font-size: 18px; }
+  .catalog-help__text { grid-column: 2; font-size: 13px; }
+  .catalog-help .catalog-help__button { grid-column: 1 / -1; margin-top: 4px; padding-inline: 16px; font-size: 14px; }
+  .catalog-help__proof { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 10px 16px; }
+  .catalog-help__proof strong { font-size: 14px; }
+  .missing-device-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .missing-device-modal .modal__head, .missing-device-form { padding: 20px; }
+  .missing-device-modal .modal__head h2 { font-size: 23px; }
+}
+
+@media (max-width: 380px) {
+  .missing-device-modal .modal__head, .missing-device-form { padding: 16px; }
+  .missing-device-modal .modal__head h2 { font-size: 21px; }
+}

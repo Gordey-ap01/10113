@@ -3,7 +3,7 @@
   const pageState = pageStateEl ? JSON.parse(pageStateEl.textContent) : { page: "home", root: "." };
   const root = pageState.root || ".";
   const app = document.getElementById("app");
-  const formEndpoint = `${root}/api/send-request.php`;
+  const formEndpoint = pageState.formEndpoint || `${root}/api/send-request.php`;
   const selectedServices = new Map();
   let records = [];
   let currentServices = [];
@@ -304,6 +304,10 @@
     form.action = formEndpoint;
     form.method = "POST";
     ensureHiddenFormField(form, "_form_type", inferFormType(form));
+    form.querySelectorAll('input[type="tel"]').forEach(configurePhoneInput);
+    if (inferFormType(form) === "missing_device" && !form.elements["_request_id"]?.value) {
+      ensureHiddenFormField(form, "_request_id", createRequestId());
+    }
 
     if (!form.querySelector('[name="website"]')) {
       const honeypot = document.createElement("input");
@@ -334,11 +338,121 @@
     return "contact";
   }
 
+  function phoneNationalDigits(value) {
+    const text = String(value || "").trim();
+    let digits = text.replace(/\D/g, "");
+    const hasCountryPrefix = /^\+\s*7/.test(text);
+    if (hasCountryPrefix || (digits.length > 10 && /^[78]/.test(digits)) || /^[78]$/.test(digits)) {
+      digits = digits.slice(1);
+    }
+    // A full domestic number may be typed after the automatically inserted +7.
+    if (hasCountryPrefix && digits.length === 11 && /^[78]/.test(digits)) digits = digits.slice(1);
+    return digits;
+  }
+
+  function formatRussianPhone(value) {
+    const digits = phoneNationalDigits(value);
+    if (!digits) return value ? "+7" : "";
+    let result = `+7 (${digits.slice(0, 3)}`;
+    if (digits.length >= 3) result += ")";
+    if (digits.length > 3) result += ` ${digits.slice(3, 6)}`;
+    if (digits.length > 6) result += `-${digits.slice(6, 8)}`;
+    if (digits.length > 8) result += `-${digits.slice(8)}`;
+    return result;
+  }
+
+  function phoneCaretPosition(value, nationalDigitsBeforeCaret) {
+    if (nationalDigitsBeforeCaret < 1) return Math.min(value.length, 2);
+    let digits = -1;
+    for (let index = 0; index < value.length; index += 1) {
+      if (/\d/.test(value[index])) digits += 1;
+      if (digits === nationalDigitsBeforeCaret) return index + 1;
+    }
+    return value.length;
+  }
+
+  function validatePhoneInput(input) {
+    const complete = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(input.value);
+    input.setCustomValidity(input.value && !complete ? "Введите номер полностью: +7 и 10 цифр." : "");
+  }
+
+  function configurePhoneInput(input) {
+    if (input.dataset.phoneReady) return;
+    input.dataset.phoneReady = "true";
+    input.autocomplete = "tel";
+    input.inputMode = "tel";
+    input.placeholder = "+7 (___) ___-__-__";
+    input.addEventListener("focus", () => {
+      if (!input.value) {
+        input.value = "+7";
+        input.setSelectionRange(2, 2);
+      }
+      validatePhoneInput(input);
+    });
+    input.addEventListener("input", () => {
+      const raw = input.value;
+      const beforeCaret = raw.slice(0, input.selectionStart ?? raw.length);
+      const nationalBeforeCaret = phoneNationalDigits(beforeCaret).length;
+      input.value = formatRussianPhone(raw);
+      const caret = phoneCaretPosition(input.value, nationalBeforeCaret);
+      input.setSelectionRange(caret, caret);
+      validatePhoneInput(input);
+    });
+    input.addEventListener("beforeinput", (event) => {
+      if (!["deleteContentBackward", "deleteContentForward"].includes(event.inputType)) return;
+      if (input.selectionStart !== input.selectionEnd || !input.value.startsWith("+7")) return;
+      const caret = input.selectionStart ?? input.value.length;
+      const positions = Array.from(input.value, (character, index) => /\d/.test(character) ? index : -1)
+        .filter((index) => index >= 0).slice(1);
+      const index = event.inputType === "deleteContentBackward"
+        ? positions.findLastIndex((position) => position < caret)
+        : positions.findIndex((position) => position >= caret);
+      event.preventDefault();
+      if (index < 0) {
+        if (!positions.length) input.value = "";
+        input.setSelectionRange(Math.min(caret, 2), Math.min(caret, 2));
+      } else {
+        const digits = phoneNationalDigits(input.value);
+        input.value = formatRussianPhone(`+7${digits.slice(0, index)}${digits.slice(index + 1)}`);
+        const nextCaret = phoneCaretPosition(input.value, index);
+        input.setSelectionRange(nextCaret, nextCaret);
+      }
+      validatePhoneInput(input);
+    });
+    input.addEventListener("paste", (event) => {
+      const text = event.clipboardData?.getData("text") || "";
+      if (text.replace(/\D/g, "").length < 10) return;
+      event.preventDefault();
+      input.value = formatRussianPhone(text);
+      input.setSelectionRange(input.value.length, input.value.length);
+      validatePhoneInput(input);
+    });
+    input.addEventListener("blur", () => {
+      if (!phoneNationalDigits(input.value)) input.value = "";
+      validatePhoneInput(input);
+    });
+    input.form?.addEventListener("reset", () => input.setCustomValidity(""));
+    if (input.value) input.value = formatRussianPhone(input.value);
+    validatePhoneInput(input);
+  }
+
+  function createRequestId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+      const random = Math.floor(Math.random() * 16);
+      return (character === "x" ? random : (random & 3) | 8).toString(16);
+    });
+  }
+
   async function handleEmailFormSubmit(event) {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.matches("[data-email-form]")) return;
     event.preventDefault();
     configureEmailForm(form);
+    form.querySelectorAll('input[type="tel"]').forEach((input) => {
+      input.value = formatRussianPhone(input.value);
+      validatePhoneInput(input);
+    });
     if (!form.reportValidity() || form.dataset.submitting === "true") return;
 
     const button = form.querySelector('button[type="submit"]');
@@ -355,9 +469,13 @@
     }
 
     try {
+      const data = new FormData(form);
+      form.querySelectorAll('input[type="tel"]').forEach((input) => {
+        if (input.name && input.value) data.set(input.name, `+7${phoneNationalDigits(input.value)}`);
+      });
       const response = await fetch(form.action, {
         method: "POST",
-        body: new FormData(form),
+        body: data,
         headers: { Accept: "application/json" },
       });
       const payload = await response.json().catch(() => ({}));
@@ -365,6 +483,9 @@
         throw new Error(payload.message || "Не удалось отправить заявку.");
       }
       form.reset();
+      if (inferFormType(form) === "missing_device") {
+        ensureHiddenFormField(form, "_request_id", createRequestId());
+      }
       if (status) {
         status.className = "form-submit-status is-success";
         status.textContent = payload.message || "Заявка отправлена. Мастер скоро свяжется с вами.";
@@ -1081,11 +1202,92 @@
 
   function initGlobalBookingButtons() {
     document.addEventListener("click", (event) => {
+      const missingDeviceTrigger = event.target.closest("[data-open-missing-device]");
+      if (missingDeviceTrigger) {
+        event.preventDefault();
+        openMissingDeviceModal();
+        return;
+      }
       const trigger = event.target.closest("[data-open-booking]");
       if (!trigger) return;
       event.preventDefault();
       openBookingModal();
     });
+  }
+
+  function openMissingDeviceModal() {
+    const dialog = ensureMissingDeviceModal();
+    const form = dialog.querySelector("form");
+    const status = form.querySelector("[data-form-status]");
+    if (status?.classList.contains("is-success")) {
+      status.className = "form-submit-status";
+      status.textContent = "";
+    }
+    ensureHiddenFormField(form, "Категория", currentDevice?.categorySlug || pageState.category || "");
+    ensureHiddenFormField(form, "Страница", `${location.origin}${location.pathname}`);
+    const category = currentDevice?.category || pageState.device?.category || "";
+    const context = dialog.querySelector("[data-missing-device-context]");
+    context.textContent = category ? `Раздел: ${category}` : "Поможем подобрать ремонт";
+    document.body.classList.add("modal-open");
+    dialog.showModal();
+    form.elements["Имя"].focus();
+  }
+
+  function ensureMissingDeviceModal() {
+    let dialog = document.querySelector(".missing-device-modal");
+    if (dialog) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.className = "missing-device-modal modal__dialog";
+    dialog.setAttribute("aria-labelledby", "missing-device-title");
+    dialog.setAttribute("aria-describedby", "missing-device-description");
+    dialog.innerHTML = `
+      <div class="modal__head">
+        <div>
+          <p class="missing-device-modal__context" data-missing-device-context></p>
+          <h2 id="missing-device-title">Не нашли своё устройство?</h2>
+          <p id="missing-device-description">Оставьте номер — мастер уточнит модель, возможность ремонта и стоимость.</p>
+        </div>
+        <button class="modal__close" type="button" aria-label="Закрыть форму">×</button>
+      </div>
+      <form class="missing-device-form" method="POST" data-email-form data-form-type="missing_device">
+        <div class="field-grid">
+          <label class="form-field">
+            <span>Имя <span class="required-mark" aria-hidden="true">*</span></span>
+            <input class="input" type="text" name="Имя" autocomplete="name" maxlength="100" placeholder="Как к вам обращаться" required>
+          </label>
+          <label class="form-field">
+            <span>Телефон <span class="required-mark" aria-hidden="true">*</span></span>
+            <input class="input" type="tel" name="Телефон" autocomplete="tel" inputmode="tel" placeholder="+7 (___) ___-__-__" required>
+          </label>
+          <label class="form-field">
+            <span>Бренд <span class="field-optional">необязательно</span></span>
+            <input class="input" type="text" name="Бренд" maxlength="100" placeholder="Например, Samsung">
+          </label>
+          <label class="form-field">
+            <span>Модель <span class="field-optional">необязательно</span></span>
+            <input class="input" type="text" name="Модель" maxlength="150" placeholder="Если знаете модель">
+          </label>
+          <label class="form-field form-field--wide">
+            <span>Что случилось? <span class="field-optional">необязательно</span></span>
+            <textarea class="input" name="Комментарий" rows="3" maxlength="2000" placeholder="Расскажите об устройстве и неисправности"></textarea>
+          </label>
+        </div>
+        <button class="btn btn-primary" type="submit">Связаться с мастером</button>
+        <p class="form-footnote">Можно оставить только имя и телефон. Остальное уточним при звонке.</p>
+      </form>
+    `;
+    document.body.appendChild(dialog);
+    configureEmailForms(dialog);
+    dialog.querySelector(".modal__close").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const bounds = dialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    });
+    dialog.addEventListener("close", () => {
+      if (!document.querySelector(".modal.visible, dialog[open]")) document.body.classList.remove("modal-open");
+    });
+    return dialog;
   }
 
   function openBookingModal(mode) {

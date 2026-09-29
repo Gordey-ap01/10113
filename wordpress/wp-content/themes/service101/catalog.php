@@ -32,7 +32,17 @@ get_header();
     <?php foreach ($models as $row): ?><a class="chip <?php echo $row['code']===$device['code']?'active':''; ?>" href="<?php echo esc_url(home_url($row['path'])); ?>"><?php echo esc_html($row['name']); ?></a><?php endforeach; ?>
     </div><button class="model-scroller__button model-scroller__button--next" type="button" aria-label="Следующие модели">›</button>
   </div></div></div>
-</div><div class="brand-counter" data-brand-counter><span class="brand-counter__label">Отремонтировано</span><strong data-brand-counter-value>8 545</strong><span class="brand-counter__brand">устройств всего</span></div></div></div></section>
+</div>
+<aside class="catalog-help" aria-label="Помощь с выбором устройства">
+  <div class="catalog-help__content">
+    <span class="catalog-help__icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="7" y="3" width="16" height="25" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 7h6M13 24h4M22 15h8m-4-4v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+    <p class="catalog-help__title">Не нашли модель?</p>
+    <p class="catalog-help__text">Поможем с устройством, которого пока нет в каталоге.</p>
+    <button class="btn btn-primary catalog-help__button" type="button" data-open-missing-device aria-haspopup="dialog">Нет моего устройства <span aria-hidden="true">↗</span></button>
+  </div>
+  <p class="catalog-help__proof" data-brand-counter><span>Уже отремонтировали</span><span><strong data-brand-counter-value>8 545</strong> <span class="brand-counter__brand">устройств всего</span></span></p>
+</aside>
+</div></div></section>
 <section class="section catalog-section"><div class="container"><div class="device-workspace">
   <article class="device-card"><div class="device-card__media">
     <?php if ($image): ?><img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($title); ?>" loading="eager"><?php else: ?><div class="device-card__placeholder" aria-hidden="true"></div><?php endif; ?>

@@ -38,17 +38,7 @@ for(const file of ['styles.css','styles-10107.css','styles-10108.css','styles-10
 await fs.mkdir(path.join(theme,'data'),{recursive:true});
 await fs.copyFile(path.join(repo,'data/repair-stats.json'),path.join(theme,'data/repair-stats.json'));
 const plugin=path.join(repo,'wordpress/wp-content/plugins/service101-catalog');
-let handler=await read('api/send-request.php');
-handler=handler.replace('<?php',`<?php\nnamespace Service101\\Forms;\ndefined('ABSPATH') || exit;\n$_POST = wp_unslash($_POST);`);
-handler=handler.replace("$config = require __DIR__ . '/mail-config.php';",`$config = require __DIR__ . '/mail-config.php';\n$config['recipient'] = get_option('s101_recipient', $config['recipient']);`);
-handler=handler.replace("$ignored = array(","$ignored = array('action', ");
-handler=handler.replace('rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)', "rtrim(defined('WP_TEMP_DIR') ? WP_TEMP_DIR : sys_get_temp_dir(), DIRECTORY_SEPARATOR)");
-handler=handler.replace("hash('sha256', $ip)", "hash('sha256', request_host() . '|' . $ip)");
-handler=handler.replace('$sent = @mail(',`if (wp_get_environment_type() === 'staging') {
-    update_option('s101_last_test_request', array('type'=>$formType,'fields'=>array_keys($labels),'at'=>gmdate('c')), false);
-    respond(200, true, 'Тестовая заявка принята. Письмо не отправлялось.');
-}
-$sent = @mail(`);
-await fs.writeFile(path.join(plugin,'includes/forms-handler.php'),handler);
+// WordPress forms now own persistent request storage; rebuilding assets must not
+// replace their maintained handler with the static site's email-only endpoint.
 await fs.copyFile(path.join(repo,'api/mail-config.php'),path.join(plugin,'includes/mail-config.php'));
-console.log('Theme reference, assets and preserved form handler prepared.');
+console.log('Theme references and assets prepared; WordPress form handler preserved.');

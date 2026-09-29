@@ -143,15 +143,39 @@ if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
     respond(422, false, 'Проверьте адрес электронной почты.');
 }
 
+$missingRequest = null;
+if ($formType === 'missing_device') {
+    try {
+        $normalized = \Service101\Requests::normalize($_POST);
+        $missingRequest = \Service101\Requests::create($_POST);
+        $phone = $normalized['phone'];
+        // Only the dedicated form fields enter the saved enquiry and its notification.
+        $_POST = array('Имя' => $normalized['name'], 'Телефон' => $phone,
+            'Категория' => $normalized['category'], 'Бренд' => $normalized['brand'],
+            'Модель' => $normalized['model'], 'Комментарий' => $normalized['comment'],
+            'Страница' => $normalized['page_url']);
+    } catch (\InvalidArgumentException $error) {
+        respond(422, false, $error->getMessage());
+    } catch (\Throwable $error) {
+        respond(503, false, 'Не удалось сохранить заявку. Повторите отправку или позвоните нам: +7 (994) 076-01-01.');
+    }
+    if ($missingRequest['duplicate']) {
+        respond(200, true, wp_get_environment_type() === 'staging'
+            ? 'Тестовая заявка уже сохранена в админке. Письмо не отправлялось.'
+            : 'Заявка уже принята. Мастер свяжется с вами.');
+    }
+}
+
 $subjects = array(
     'contact' => 'Заявка с сайта Сервис 101',
     'onsite' => 'Заявка на выезд мастера — Сервис 101',
     'b2b' => 'Заявка от организации — Сервис 101',
     'booking' => 'Запись на ремонт — Сервис 101',
+    'missing_device' => 'Не найдено устройство в каталоге — Сервис 101',
 );
 $subject = isset($subjects[$formType]) ? $subjects[$formType] : $subjects['contact'];
 
-$ignored = array('action', '_subject', '_template', '_captcha', '_next', '_form_type', 'website', 'branch_choice');
+$ignored = array('action', '_subject', '_template', '_captcha', '_next', '_form_type', '_request_id', 'website', 'branch_choice');
 $labels = array();
 foreach ($_POST as $key => $value) {
     $label = clean_value($key, 100);
@@ -193,8 +217,18 @@ $message = '<!doctype html><html lang="ru"><head><meta charset="UTF-8"></head>'
 $recipient = isset($config['recipient']) ? (string) $config['recipient'] : '';
 $fromEmail = isset($config['from_email']) ? (string) $config['from_email'] : '';
 $fromName = isset($config['from_name']) ? (string) $config['from_name'] : 'Сервис 101';
+if (wp_get_environment_type() === 'staging') {
+    update_option('s101_last_test_request', array('type'=>$formType,'fields'=>array_keys($labels),'at'=>gmdate('c')), false);
+    respond(200, true, $missingRequest
+        ? 'Тестовая заявка сохранена в админке. Письмо не отправлялось.'
+        : 'Тестовая заявка принята. Письмо не отправлялось.');
+}
 if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false || filter_var($fromEmail, FILTER_VALIDATE_EMAIL) === false) {
     error_log('Service 101 form: invalid mail configuration');
+    if ($missingRequest) {
+        \Service101\Requests::mail_result($missingRequest['id'], false);
+        respond(200, true, 'Заявка принята и сохранена. Мастер свяжется с вами.');
+    }
     respond(503, false, 'Отправка временно недоступна. Позвоните нам: +7 (994) 076-01-01.');
 }
 
@@ -211,10 +245,6 @@ if ($email !== '') {
     $headers[] = 'Reply-To: ' . $email;
 }
 
-if (wp_get_environment_type() === 'staging') {
-    update_option('s101_last_test_request', array('type'=>$formType,'fields'=>array_keys($labels),'at'=>gmdate('c')), false);
-    respond(200, true, 'Тестовая заявка принята. Письмо не отправлялось.');
-}
 $sent = @mail(
     $recipient,
     $encodedSubject,
@@ -222,8 +252,10 @@ $sent = @mail(
     implode("\r\n", $headers),
     '-f' . $fromEmail
 );
+if ($missingRequest) { \Service101\Requests::mail_result($missingRequest['id'], (bool) $sent); }
 if (!$sent) {
     error_log('Service 101 form: mail() returned false');
+    if ($missingRequest) { respond(200, true, 'Заявка принята и сохранена. Мастер свяжется с вами.'); }
     respond(503, false, 'Не удалось отправить заявку. Позвоните нам: +7 (994) 076-01-01.');
 }
 

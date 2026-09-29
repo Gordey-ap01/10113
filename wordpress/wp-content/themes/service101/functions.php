@@ -9,7 +9,7 @@ remove_action('wp_head','wp_oembed_add_discovery_links');
 remove_action('wp_head','rel_canonical');
 add_action('wp_enqueue_scripts',static function(){
     $uri=get_stylesheet_directory_uri();
-    $files=['styles.css','styles-10107.css','styles-10110.css'];
+    $files=['styles.css','styles-10107.css','styles-10110.css','catalog-enhancements.css'];
     if (is_front_page()) { array_splice($files,2,0,['styles-10108.css']); }
     foreach ($files as $file) { wp_enqueue_style('s101-'.sanitize_key($file),$uri.'/'.$file,[],filemtime(get_stylesheet_directory().'/'.$file)); }
     wp_enqueue_script('s101-app',$uri.'/scripts/app.js',[],filemtime(get_stylesheet_directory().'/scripts/app.js'),['strategy'=>'defer','in_footer'=>true]);
