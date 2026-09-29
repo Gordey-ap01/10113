@@ -39,12 +39,15 @@ final class Admin
                 $taxonomy=$operation==='save_category'?'s101_category':'s101_brand';
                 $term_input=wp_unslash($_POST['term']??[]);
                 if (!is_array($term_input)) { throw new \RuntimeException('Некорректная форма справочника.'); }
+                $term_input['revision']=(int)($_POST['revision']??-1);
                 if ($taxonomy==='s101_category' && !isset($term_input['home_enabled'])) { $term_input['home_enabled']='0'; }
                 $term=Catalog::save_term($taxonomy,$term_input);
                 wp_safe_redirect(self::url(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','saved'=>$term->term_id])); exit;
             } elseif ($operation==='save') {
                 $device=wp_unslash($_POST['device']??[]); $rows=wp_unslash($_POST['prices']??[]);
                 if (!is_array($device) || !is_array($rows) || count($rows)>100) { throw new \RuntimeException('Некорректная форма устройства.'); }
+                $code=Import::code((string)($device['code']??''));
+                $device=Catalog::selected_device_terms($device,Catalog::devices(true)[$code]??null);
                 $prices=[];
                 foreach ($rows as $row) { if (!is_array($row)) { throw new \RuntimeException('Некорректная строка услуги.'); } if (empty($row['service_code']) && empty($row['name'])) { continue; } $row['device_code']=$device['code']??''; $prices[]=$row; }
                 $copy=sanitize_text_field(wp_unslash($_POST['copy_from']??''));
@@ -75,34 +78,50 @@ final class Admin
     private static function listing(): void
     {
         echo '<p><a class="button button-primary" href="'.esc_url(self::url(['edit'=>'new'])).'">Добавить устройство</a> <a class="button" href="'.esc_url(self::url(['page'=>'s101-import'])).'">Импорт и экспорт Excel</a></p>';
-        echo '<table class="widefat striped"><thead><tr><th>Код</th><th>Устройство</th><th>Категория / бренд</th><th>Публикация</th><th>Услуги</th><th>Просмотр</th></tr></thead><tbody>';
+        echo '<table class="widefat striped"><thead><tr><th>Код</th><th>Устройство</th><th>Категория / бренд</th><th>Публикация</th><th>Порядок модели</th><th>Услуги</th><th>Просмотр</th></tr></thead><tbody>';
         $counts=[]; foreach (Catalog::prices() as $price) { $counts[$price['device_code']]=($counts[$price['device_code']]??0)+1; }
-        foreach (Catalog::devices(true) as $code=>$d) { echo '<tr><td>'.esc_html($code).'</td><td><a href="'.esc_url(self::url(['edit'=>$code])).'"><strong>'.esc_html($d['name']).'</strong></a></td><td>'.esc_html($d['category'].' / '.$d['brand']).'</td><td>'.esc_html($d['publication']).'</td><td>'.($counts[$code]??0).'</td><td><a href="'.esc_url(home_url($d['path'])).'" target="_blank" rel="noopener">Открыть</a></td></tr>'; }
-        echo '</tbody></table><p>Черновики видны на сайте только вошедшему администратору каталога. Посетители получают 404.</p>';
+        foreach (Catalog::devices(true) as $code=>$d) { echo '<tr><td>'.esc_html($code).'</td><td><a href="'.esc_url(self::url(['edit'=>$code])).'"><strong>'.esc_html($d['name']).'</strong></a></td><td>'.esc_html($d['category'].' / '.$d['brand']).'</td><td>'.esc_html($d['publication']).'</td><td>'.(int)$d['model_order'].'</td><td>'.($counts[$code]??0).'</td><td><a href="'.esc_url(home_url($d['path'])).'" target="_blank" rel="noopener">Открыть</a></td></tr>'; }
+        echo '</tbody></table><p>На тестовой площадке черновики доступны для проверки. На основном сайте посетителям показываются только опубликованные устройства.</p>';
     }
     private static function terms(string $taxonomy): void
     {
         $is_category=$taxonomy==='s101_category'; $label=$is_category?'Категория':'Бренд';
+        $brand_usage=$is_category?[]:Catalog::brand_usage();
         $editing=absint($_GET['edit_term']??0); $term=$editing?get_term($editing,$taxonomy):null;
         if ($editing && !$term instanceof \WP_Term) { throw new \RuntimeException('Элемент справочника не найден.'); }
         $data=$term instanceof \WP_Term ? ['term_id'=>$term->term_id,'name'=>$term->name,'slug'=>$term->slug] : [];
         foreach (['sort_order','home_enabled','home_image_id','catalog_title','catalog_subtitle','catalog_intro','info_title','info_text','info_items'] as $key) { $data[$key]=$term?get_term_meta($term->term_id,'s101_'.$key,true):''; }
         echo '<p>Справочник управляет вариантами в карточке устройства и каталогом. Адрес создаётся один раз и не меняется после появления моделей.</p>';
-        echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand');
+        echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand',['revision'=>Catalog::revision()]);
         echo '<input type="hidden" name="term[term_id]" value="'.absint($data['term_id']??0).'">';
         self::field('term[name]','Название',$data['name']??''); self::field('term[slug]','Код адреса (латиницей, только при создании)',$data['slug']??'',[],(bool)$term);
-        self::field('term[sort_order]','Порядок показа',$data['sort_order']??'100');
         if ($is_category) {
-            echo '<p><label><input type="checkbox" name="term[home_enabled]" value="1" '.checked($data['home_enabled']??'', '1',false).'> Показывать карточку категории на главной</label></p>';
+            self::weight_field('term[sort_order]','Порядок категории',$data['sort_order']!==''?$data['sort_order']:1000);
+            echo '<p><label><input style="width:auto" type="checkbox" name="term[home_enabled]" value="1" '.checked($data['home_enabled']??'', '1',false).'> Показывать карточку категории на главной</label></p>';
             self::field('term[catalog_title]','Заголовок в каталоге',$data['catalog_title']??''); self::field('term[catalog_subtitle]','Подзаголовок цен',$data['catalog_subtitle']??'');
             echo '<label for="s101-term-catalog-intro">Короткое описание</label><textarea id="s101-term-catalog-intro" name="term[catalog_intro]" rows="3">'.esc_textarea($data['catalog_intro']??'').'</textarea>';
             self::field('term[info_title]','Заголовок блока «Важно знать»',$data['info_title']??'');
             echo '<label for="s101-term-info-text">Текст блока «Важно знать»</label><textarea id="s101-term-info-text" name="term[info_text]" rows="3">'.esc_textarea($data['info_text']??'').'</textarea>';
             echo '<label for="s101-term-info-items">Пункты блока «Важно знать» — по одному на строку</label><textarea id="s101-term-info-items" name="term[info_items]" rows="4">'.esc_textarea($data['info_items']??'').'</textarea>';
+        } else {
+            $selected=$term?Catalog::brand_categories($term,$brand_usage):[];
+            echo '<h3>Категории бренда и порядок в каждой категории</h3><p>Выберите одну или несколько категорий. Меньше число — выше бренд в списке. При одинаковом порядке сохраняется прежняя последовательность.</p><div class="s101-grid">';
+            foreach (Catalog::terms('s101_category') as $category) {
+                echo '<div><label><input style="width:auto" type="checkbox" name="term[category_slugs][]" value="'.esc_attr($category->slug).'" '.checked(in_array($category->slug,$selected,true),true,false).'> '.esc_html($category->name).'</label>';
+                self::weight_field('term[category_orders]['.$category->slug.']','Порядок в категории «'.$category->name.'»',$term?Catalog::brand_order($term,$category->slug):1000);
+                echo '</div>';
+            }
+            echo '</div><p>Категорию, в которой уже есть модели бренда, отключить нельзя: это сохраняет их связь и адреса.</p>';
         }
         submit_button($term?'Сохранить':'Создать '.$label); echo '</form></div>';
-        echo '<h2>Существующие '.($is_category?'категории':'бренды').'</h2><table class="widefat striped"><thead><tr><th>Название</th><th>Адрес</th><th>Модели</th><th></th></tr></thead><tbody>';
-        foreach (Catalog::terms($taxonomy) as $item) { $count=(int)$item->count; echo '<tr><td>'.esc_html($item->name).'</td><td><code>'.esc_html($item->slug).'</code></td><td>'.$count.'</td><td><a href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands','edit_term'=>$item->term_id])).'">Изменить</a></td></tr>'; }
+        echo '<h2>Существующие '.($is_category?'категории':'бренды').'</h2><p>«Модели» — все устройства, включая черновики и скрытые. Рядом показано, сколько из них опубликовано.</p><table class="widefat striped"><thead><tr><th>Название</th><th>Адрес</th><th>Модели</th><th>'.($is_category?'Порядок':'Категории · порядок').'</th><th></th></tr></thead><tbody>';
+        $counts=Catalog::model_counts($taxonomy);
+        foreach (Catalog::terms($taxonomy) as $item) {
+            $count=$counts[$item->slug]??['total'=>0,'published'=>0]; $ordering=[];
+            if ($is_category) { $ordering[]=(string)Catalog::category($item->slug)['sort_order']; }
+            else { foreach (Catalog::brand_categories($item,$brand_usage) as $slug) { $category=Catalog::term_by_slug('s101_category',$slug); if ($category) { $ordering[]=$category->name.' · '.Catalog::brand_order($item,$slug); } } }
+            echo '<tr><td>'.esc_html($item->name).'</td><td><code>'.esc_html($item->slug).'</code></td><td><strong>'.$count['total'].'</strong><br><small>Опубликовано: '.$count['published'].'</small></td><td>'.esc_html(implode('; ',$ordering)).'</td><td><a href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands','edit_term'=>$item->term_id])).'">Изменить</a></td></tr>';
+        }
         echo '</tbody></table>';
     }
     private static function upload(): void
@@ -121,8 +140,8 @@ final class Admin
         foreach ($plan['warnings'] as $warning) { echo '<p class="notice notice-warning">'.esc_html($warning).'</p>'; }
         if ($batch['state']==='preview' && !$plan['errors']) { self::form('apply',['batch'=>$id]); submit_button('Применить проверенные изменения','primary','submit',false); echo '</form>'; }
         if ($batch['state']==='applied' && Catalog::revision()===(int)$batch['revision']+1) { self::form('restore',['batch'=>$id]); echo '<p>Восстановление вернёт весь каталог к состоянию перед этим пакетом.</p>'; submit_button('Восстановить состояние перед пакетом','secondary','submit',false); echo '</form>'; }
-        echo '<div class="card"><h2>Устройства</h2><table class="widefat striped"><thead><tr><th>Строка</th><th>Код</th><th>Название</th><th>Публикация</th><th>Адрес</th></tr></thead><tbody>';
-        foreach ($plan['devices'] as $key=>$change) { $d=$change['after']; echo '<tr><td>'.$change['row'].'</td><td>'.esc_html($key).'</td><td>'.esc_html($d['name']).'</td><td>'.esc_html($d['publication']).'</td><td>'.esc_html($d['path']).'</td></tr>'; }
+        echo '<div class="card"><h2>Устройства</h2><table class="widefat striped"><thead><tr><th>Строка</th><th>Код</th><th>Название</th><th>Публикация</th><th>Порядок: до → после</th><th>Адрес</th></tr></thead><tbody>';
+        foreach ($plan['devices'] as $key=>$change) { $d=$change['after']; echo '<tr><td>'.$change['row'].'</td><td>'.esc_html($key).'</td><td>'.esc_html($d['name']).'</td><td>'.esc_html($d['publication']).'</td><td>'.esc_html(($change['before']['model_order']??'—').' → '.($d['model_order']??1000)).'</td><td>'.esc_html($d['path']).'</td></tr>'; }
         echo '</tbody></table></div><div class="card"><h2>Услуги и цены</h2><p>Название общего кода услуги обновится у всех устройств, где используется этот код.</p><table class="widefat striped"><thead><tr><th>Строка</th><th>Устройство / услуга</th><th>Название</th><th>Работа: до → после</th><th>С деталью: до → после</th><th>Действие</th></tr></thead><tbody>';
         foreach ($plan['prices'] as $key=>$change) {
             if ($change['state']==='same') { continue; }
@@ -147,18 +166,41 @@ final class Admin
         if ($choices) { echo '<select id="'.esc_attr($id).'" name="'.esc_attr($name).'">'; foreach ($choices as $choice) { echo '<option '.selected((string)$value,$choice,false).'>'.esc_html($choice).'</option>'; } echo '</select>'; }
         else { echo '<input id="'.esc_attr($id).'" name="'.esc_attr($name).'" value="'.esc_attr((string)($value??'')).'" '.($readonly?'readonly':'').'>'; }
     }
+    private static function weight_field(string $name,string $label,mixed $value): void
+    {
+        $id='s101-'.preg_replace('/[^a-z0-9]/i','-',$name);
+        echo '<label for="'.esc_attr($id).'">'.esc_html($label).'</label><input type="number" min="0" max="99999" step="1" id="'.esc_attr($id).'" name="'.esc_attr($name).'" value="'.esc_attr((string)$value).'"><p class="description">0–99999. Меньше число — выше в списке; по умолчанию 1000.</p>';
+    }
+
+    private static function device_term_select(string $kind,array $device,array $brand_usage): void
+    {
+        $key=$kind.'_slug'; $label=$kind==='category'?'Категория':'Бренд';
+        echo '<label for="s101-device-'.$kind.'">'.$label.'</label><select id="s101-device-'.$kind.'" name="device['.$key.']" required '.($device?'disabled':'').'><option value="">Выберите '.($kind==='category'?'категорию':'бренд').'</option>';
+        foreach (Catalog::terms('s101_'.$kind) as $term) {
+            $relations=$kind==='brand'?' data-categories="'.esc_attr(Catalog::json(Catalog::brand_categories($term,$brand_usage))).'"':'';
+            echo '<option value="'.esc_attr($term->slug).'"'.$relations.' '.selected($device[$key]??'',$term->slug,false).'>'.esc_html($term->name).'</option>';
+        }
+        echo '</select>';
+        if ($device) { echo '<input type="hidden" name="device['.$key.']" value="'.esc_attr($device[$key]).'"><p class="description">Закреплено в постоянном адресе устройства.</p>'; }
+        echo '<p><a href="'.esc_url(self::url(['page'=>$kind==='category'?'s101-categories':'s101-brands'])).'" target="_blank" rel="noopener">Добавить '.($kind==='category'?'категорию':'бренд').'</a> · после добавления обновите эту страницу.</p>';
+    }
     private static function editor(string $code): void
     {
         $devices=Catalog::devices(true); $device=$devices[$code]??[];
+        $brand_usage=Catalog::brand_usage($devices);
         if ($code!=='new' && !$device) { throw new \RuntimeException('Устройство не найдено.'); }
         echo '<h2>'.esc_html($device['name']??'Новое устройство').'</h2>';
         self::form('save',['revision'=>Catalog::revision()]);
         echo '<div class="card"><div class="s101-grid">';
         foreach (Workbook::DEVICE_KEYS as $i=>$key) {
+            if (in_array($key,['category_slug','brand_slug'],true)) { continue; }
             echo '<div>';
-            self::field('device['.$key.']',Workbook::DEVICE_HEADERS[$i],$device[$key]??($key==='publication'?'Черновик':''),$key==='publication'?['Черновик','Опубликовать','Скрыть']:[],!empty($device)&&in_array($key,['code','path','category_slug','brand_slug','model_slug'],true));
+            if (in_array($key,['category','brand'],true)) { self::device_term_select($key,$device,$brand_usage); }
+            elseif ($key==='model_order') { self::weight_field('device[model_order]','Порядок модели в категории',$device['model_order']??1000); }
+            else { self::field('device['.$key.']',Workbook::DEVICE_HEADERS[$i],$device[$key]??($key==='publication'?'Черновик':''),$key==='publication'?['Черновик','Опубликовать','Скрыть']:[],!empty($device)&&in_array($key,['code','path','model_slug'],true)); }
             echo '</div>';
         }
+        echo '<script>(function(){const category=document.getElementById("s101-device-category"),brand=document.getElementById("s101-device-brand");function filter(){if(brand.disabled)return;for(const option of brand.options){if(!option.value)continue;const available=JSON.parse(option.dataset.categories||"[]").includes(category.value);option.hidden=!available;option.disabled=!available;if(!available&&option.selected)brand.value="";}brand.options[0].textContent=category.value?"Выберите бренд этой категории":"Сначала выберите категорию";}category.addEventListener("change",filter);filter();})();</script>';
         echo '</div><p>Фото: прямая HTTPS-ссылка. Служебные коды адреса новой модели можно оставить пустыми — они появятся в отчёте. Для очистки необязательного поля введите [очистить].</p></div><div class="card"><h2>Услуги и цены</h2><div class="s101-scroll"><table class="widefat s101-prices"><thead><tr>';
         $keys=array_values(array_diff(Workbook::PRICE_KEYS,['device_code','device_name']));
         foreach ($keys as $key) { echo '<th>'.esc_html(Workbook::PRICE_HEADERS[array_search($key,Workbook::PRICE_KEYS,true)]).'</th>'; }

@@ -52,16 +52,39 @@ final class Catalog
     /** Creates a term or updates its editor-owned presentation settings. Slugs stay stable after creation. */
     public static function save_term(string $taxonomy,array $input): \WP_Term
     {
+        global $wpdb;
         if (!in_array($taxonomy,['s101_category','s101_brand'],true)) { throw new \InvalidArgumentException('Неизвестный справочник.'); }
         $id=absint($input['term_id']??0); $name=sanitize_text_field((string)($input['name']??''));
         if ($name==='') { throw new \InvalidArgumentException('Введите название.'); }
         if (mb_strlen($name)>120) { throw new \InvalidArgumentException('Название длиннее 120 символов.'); }
+        $categories=[]; $orders=[];
+        if ($taxonomy==='s101_brand') {
+            if (!is_array($input['category_slugs']??null) || !is_array($input['category_orders']??[])) { throw new \InvalidArgumentException('Выберите категории бренда.'); }
+            foreach ($input['category_slugs'] as $slug) {
+                if (!is_string($slug) || !self::term_by_slug('s101_category',$slug)) { throw new \InvalidArgumentException('Выбрана неизвестная категория.'); }
+                $categories[]=$slug;
+                $orders[$slug]=self::weight($input['category_orders'][$slug]??'',1000);
+            }
+            $categories=array_values(array_unique($categories));
+            if (!$categories) { throw new \InvalidArgumentException('Выберите хотя бы одну категорию бренда.'); }
+        }
+        if (array_key_exists('sort_order',$input)) { $input['sort_order']=self::weight($input['sort_order'],1000); }
+        self::assert_db($wpdb->query('START TRANSACTION'));
+        try {
+        $revision=(int)$wpdb->get_var('SELECT revision FROM '.self::table('state').' WHERE id=1 FOR UPDATE');
+        if (isset($input['revision']) && (int)$input['revision']!==$revision) { throw new \RuntimeException('Каталог изменился. Обновите страницу справочника и повторите правки.'); }
         if ($id) {
             $term=get_term($id,$taxonomy);
             if (!$term instanceof \WP_Term) { throw new \InvalidArgumentException('Элемент справочника не найден.'); }
+            if ($taxonomy==='s101_brand') {
+                foreach (self::brand_usage()[$term->slug]??[] as $slug) {
+                    if (!in_array($slug,$categories,true)) { throw new \InvalidArgumentException('В категории уже есть модели этого бренда. Сохраните её связь с брендом.'); }
+                }
+            }
             $saved=wp_update_term($id,$taxonomy,['name'=>$name]);
         } else {
-            $slug=self::slug((string)($input['slug']??$name));
+            $requested_slug=trim((string)($input['slug']??''));
+            $slug=self::slug($requested_slug!==''?$requested_slug:$name);
             if ($slug==='' || self::term_by_slug($taxonomy,$slug)) { throw new \InvalidArgumentException('Такой постоянный адрес уже занят.'); }
             $saved=wp_insert_term($name,$taxonomy,['slug'=>$slug]);
         }
@@ -71,7 +94,66 @@ final class Catalog
         foreach (['sort_order'=>'absint','home_enabled'=>static fn($v)=>$v==='1'?'1':'0','home_image_id'=>'absint','catalog_title'=>'sanitize_text_field','catalog_subtitle'=>'sanitize_text_field','catalog_intro'=>'sanitize_textarea_field','info_title'=>'sanitize_text_field','info_text'=>'sanitize_textarea_field','info_items'=>'sanitize_textarea_field'] as $key=>$sanitize) {
             if (array_key_exists($key,$input)) { update_term_meta($term->term_id,'s101_'.$key,$sanitize($input[$key])); }
         }
+        if ($taxonomy==='s101_brand') {
+            update_term_meta($term->term_id,'s101_category_slugs',$categories);
+            update_term_meta($term->term_id,'s101_category_orders',$orders);
+        }
+        self::assert_db($wpdb->query('UPDATE '.self::table('state').' SET revision=revision+1 WHERE id=1'));
+        self::assert_db($wpdb->query('COMMIT'));
         return $term;
+        } catch (\Throwable $error) { $wpdb->query('ROLLBACK'); wp_cache_flush(); throw $error; }
+    }
+
+    public static function weight(mixed $value,int $default=1000): int
+    {
+        if ($value==='' || $value===null) { return $default; }
+        if (!is_scalar($value) || !preg_match('/^\d{1,5}$/D',(string)$value)) { throw new \InvalidArgumentException('Порядок — целое число от 0 до 99999. Меньше число — выше в списке.'); }
+        return (int)$value;
+    }
+
+    public static function brand_usage(?array $devices=null): array
+    {
+        $usage=[];
+        foreach ($devices??self::devices(true) as $device) { $usage[$device['brand_slug']][$device['category_slug']]=true; }
+        return array_map('array_keys',$usage);
+    }
+
+    /** Existing usage is always a relation, including devices imported before brand categories existed. */
+    public static function brand_categories(\WP_Term $brand,?array $usage=null): array
+    {
+        $saved=get_term_meta($brand->term_id,'s101_category_slugs',true);
+        $usage??=self::brand_usage();
+        return array_values(array_unique(array_merge(is_array($saved)?$saved:[],$usage[$brand->slug]??[])));
+    }
+
+    public static function brand_order(\WP_Term $brand,string $category_slug): int
+    {
+        $orders=get_term_meta($brand->term_id,'s101_category_orders',true);
+        return is_array($orders) && isset($orders[$category_slug]) ? (int)$orders[$category_slug] : 1000;
+    }
+
+    public static function model_counts(string $taxonomy): array
+    {
+        $key=$taxonomy==='s101_category'?'category_slug':'brand_slug'; $counts=[];
+        foreach (self::devices(true) as $device) {
+            $slug=$device[$key]; $counts[$slug]??=['total'=>0,'published'=>0];
+            $counts[$slug]['total']++;
+            if ($device['publication']==='Опубликовать') { $counts[$slug]['published']++; }
+        }
+        return $counts;
+    }
+
+    /** Resolve admin selections on the server; submitted display names and slugs are not trusted. */
+    public static function selected_device_terms(array $input,?array $before=null): array
+    {
+        foreach (['category_slug','brand_slug'] as $key) { if (!is_string($input[$key]??null)) { throw new \InvalidArgumentException('Выберите категорию и бренд из существующих справочников.'); } }
+        $category=self::term_by_slug('s101_category',(string)($input['category_slug']??''));
+        $brand=self::term_by_slug('s101_brand',(string)($input['brand_slug']??''));
+        if (!$category || !$brand) { throw new \InvalidArgumentException('Выберите категорию и бренд из существующих справочников.'); }
+        if (!in_array($category->slug,self::brand_categories($brand),true)) { throw new \InvalidArgumentException('Этот бренд не относится к выбранной категории. Сначала измените категории бренда.'); }
+        if ($before && ($before['category_slug']!==$category->slug || $before['brand_slug']!==$brand->slug)) { throw new \InvalidArgumentException('У существующей модели категория и бренд закреплены в адресе. Для переноса нужна отдельная миграция URL.'); }
+        $input['category']=$category->name; $input['brand']=$brand->name;
+        return $input;
     }
 
     public static function category(string $slug): array
@@ -81,7 +163,10 @@ final class Catalog
         if (!$term) { return $fallback+['slug'=>$slug,'name'=>$slug]; }
         $copy=function_exists('s101_copy')?s101_copy():[];
         $legacy=$copy['categories'][$slug]??[]; $legacy_info=$copy['info'][$slug]??[];
-        $value=static fn(string $key,mixed $default='')=>get_term_meta($term->term_id,'s101_'.$key,true)?:$default;
+        $value=static function(string $key,mixed $default='') use($term): mixed {
+            $value=get_term_meta($term->term_id,'s101_'.$key,true);
+            return $value!=='' ? $value : $default;
+        };
         $items=preg_split('/\R/u',(string)$value('info_items',''));
         $items=array_values(array_filter(array_map('trim',$items)));
         return ['term_id'=>(int)$term->term_id,'slug'=>$term->slug,'name'=>$term->name,
@@ -105,10 +190,34 @@ final class Catalog
     {
         global $wpdb;
         $sql = 'SELECT d.*, p.post_status, p.post_title FROM ' . self::table('devices') . " d JOIN {$wpdb->posts} p ON p.ID=d.post_id";
-        if (!$include_hidden) { $sql .= " WHERE p.post_status='publish'"; }
+        $sql .= $include_hidden ? " WHERE p.post_status IN ('publish','draft','private','pending','future')" : " WHERE p.post_status='publish'";
         $rows = $wpdb->get_results($sql . ' ORDER BY d.post_id', ARRAY_A);
-        $result = [];
-        foreach ($rows as $row) { $data = json_decode($row['data'], true); $data['post_id']=(int)$row['post_id']; $data['path']=$row['path']; $result[$row['code']]=$data; }
+        $result = []; $categories=[]; $brands=[]; $category_rank=[]; $brand_rank=[];
+        foreach (self::terms('s101_category') as $term) { $categories[$term->slug]=$term; }
+        foreach (self::terms('s101_brand') as $term) { $brands[$term->slug]=$term; }
+        foreach ($rows as $row) {
+            $data=json_decode($row['data'],true); $data['post_id']=(int)$row['post_id']; $data['path']=$row['path'];
+            $data['publication']=self::label($row['post_status']); $data['model_order']=(int)($data['model_order']??1000);
+            $category=$data['category_slug']; $brand=$data['brand_slug'];
+            if (isset($categories[$category])) { $data['category']=$categories[$category]->name; }
+            if (isset($brands[$brand])) { $data['brand']=$brands[$brand]->name; }
+            $category_rank[$category]??=count($category_rank);
+            $brand_rank[$category][$brand]??=count($brand_rank[$category]??[]);
+            $result[$row['code']]=$data;
+        }
+        uasort($result,static function(array $a,array $b) use($categories,$brands,$category_rank,$brand_rank): int {
+            $category_weight=static function(string $slug) use($categories): int {
+                $term=$categories[$slug]??null;
+                return $term && metadata_exists('term',$term->term_id,'s101_sort_order')?(int)get_term_meta($term->term_id,'s101_sort_order',true):1000;
+            };
+            $a_category=$a['category_slug']; $b_category=$b['category_slug'];
+            return ($category_weight($a_category)<=>$category_weight($b_category))
+                ?: ($category_rank[$a_category]<=>$category_rank[$b_category])
+                ?: ((isset($brands[$a['brand_slug']])?self::brand_order($brands[$a['brand_slug']],$a_category):1000)<=>(isset($brands[$b['brand_slug']])?self::brand_order($brands[$b['brand_slug']],$b_category):1000))
+                ?: ($brand_rank[$a_category][$a['brand_slug']]<=>$brand_rank[$b_category][$b['brand_slug']])
+                ?: ($a['model_order']<=>$b['model_order'])
+                ?: ($a['post_id']<=>$b['post_id']);
+        });
         return $result;
     }
 

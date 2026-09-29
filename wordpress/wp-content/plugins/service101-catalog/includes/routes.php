@@ -15,8 +15,8 @@ final class Routes
         register_taxonomy('s101_category','s101_device',['label'=>'Категории устройств','public'=>false,'show_ui'=>false,'rewrite'=>false]);
         register_taxonomy('s101_brand','s101_device',['label'=>'Бренды','public'=>false,'show_ui'=>false,'rewrite'=>false]);
         add_rewrite_rule('^remont/vyezdnoj-remont(?:/index\.html)?/?$','index.php?s101_onsite=1','top');
-        add_rewrite_rule('^remont/([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)(?:/index\.html)?/?$','index.php?s101_path=$matches[1]/$matches[2]/$matches[3]','top');
-        add_rewrite_rule('^remont/([a-z0-9-]+)(?:/index\.html)?/?$','index.php?s101_category=$matches[1]','top');
+        add_rewrite_rule('^remont/([a-z0-9_-]+)/([a-z0-9_-]+)/([a-z0-9_-]+)(?:/index\.html)?/?$','index.php?s101_path=$matches[1]/$matches[2]/$matches[3]','top');
+        add_rewrite_rule('^remont/([a-z0-9_-]+)(?:/index\.html)?/?$','index.php?s101_category=$matches[1]','top');
         add_rewrite_rule('^b2b/index\.html$','index.php?pagename=b2b','top');
     }
     public static function permalink(string $link, \WP_Post $post): string

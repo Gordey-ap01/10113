@@ -65,10 +65,19 @@ final class Import
         $data['publication']=$data['publication']?:'Черновик';
         if (!in_array($data['publication'],['Черновик','Опубликовать','Скрыть'],true)) { throw new \InvalidArgumentException('Неизвестное состояние публикации.'); }
         foreach (['category_slug'=>'category','brand_slug'=>'brand','model_slug'=>'name'] as $key=>$source) {
+            if ($key!=='model_slug' && empty($data[$key])) {
+                $named=get_term_by('name',$data[$source],'s101_'.$source);
+                if ($named instanceof \WP_Term) { $data[$key]=$named->slug; }
+            }
             $data[$key]=$data[$key]?:Catalog::slug($data[$source]);
-            if (!preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D',$data[$key])) { throw new \InvalidArgumentException('Код раздела/бренда/модели: латинские буквы, цифры и дефисы.'); }
+            if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/D',$data[$key])) { throw new \InvalidArgumentException('Код раздела/бренда/модели: латинские буквы, цифры, дефисы и подчёркивания.'); }
             if ($before && $data[$key]!==$before[$key]) { throw new \InvalidArgumentException('Существующие коды адреса нельзя менять импортом. Название можно менять свободно.'); }
+            if ($key!=='model_slug') {
+                $term=Catalog::term_by_slug('s101_'.$source,$data[$key]);
+                if ($term) { $data[$source]=$term->name; }
+            }
         }
+        $data['model_order']=Catalog::weight($data['model_order']??'',1000);
         $data['category_title']=$data['category_title']?:'Ремонт '.mb_strtolower($data['category']);
         $expected='/remont/'.$data['category_slug'].'/'.$data['brand_slug'].'/'.$data['model_slug'].'/';
         $path=$data['path']?:$expected;

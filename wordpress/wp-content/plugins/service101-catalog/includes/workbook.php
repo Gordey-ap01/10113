@@ -5,9 +5,9 @@ defined('ABSPATH') || exit;
 
 final class Workbook
 {
-    public const DEVICE_HEADERS = ['Код устройства','Устройство','Категория','Бренд','Публикация','Фото 1: ссылка','Описание устройства','Фото 2: ссылка','Фото 3: ссылка','Код категории','Заголовок категории','Код бренда','Код модели','Существующий URL'];
+    public const DEVICE_HEADERS = ['Код устройства','Устройство','Категория','Бренд','Публикация','Фото 1: ссылка','Описание устройства','Фото 2: ссылка','Фото 3: ссылка','Код категории','Заголовок категории','Код бренда','Код модели','Существующий URL','Порядок модели'];
     public const PRICE_HEADERS = ['Код устройства','Устройство (авто)','Код услуги','Услуга','Тип цены работ','Работа, ₽','Цена с деталью: тип','С деталью, ₽','Срок ремонта','Пометка','Описание работы','Действие','Порядок'];
-    public const DEVICE_KEYS = ['code','name','category','brand','publication','image1','description','image2','image3','category_slug','category_title','brand_slug','model_slug','path'];
+    public const DEVICE_KEYS = ['code','name','category','brand','publication','image1','description','image2','image3','category_slug','category_title','brand_slug','model_slug','path','model_order'];
     public const PRICE_KEYS = ['device_code','device_name','service_code','name','work_type','work_amount','total_type','total_amount','time','badge','description','action','order'];
 
     private static function loader(): void
@@ -51,12 +51,15 @@ final class Workbook
             foreach ([['Устройства',self::DEVICE_HEADERS,self::DEVICE_KEYS,'devices'],['Услуги и цены',self::PRICE_HEADERS,self::PRICE_KEYS,'prices']] as [$title,$headers,$keys,$kind]) {
                 $sheet=$book->getSheetByName($title);
                 if (!$sheet) { throw new \RuntimeException('В книге отсутствует лист «'.$title.'».'); }
+                $optional_order=$kind==='devices' && trim((string)$sheet->getCell([15,7])->getValue())==='';
                 foreach ($headers as $i=>$header) {
+                    if ($optional_order && $keys[$i]==='model_order') { continue; }
                     if (trim((string)$sheet->getCell([$i+1,7])->getValue())!==$header) { throw new \RuntimeException('Лист «'.$title.'», строка 7: ожидается столбец «'.$header.'».'); }
                 }
                 for ($row=8;$row<=$sheet->getHighestDataRow();$row++) {
                     $record=['_row'=>$row, '_sheet'=>$title]; $nonempty=false;
                     foreach ($keys as $i=>$key) {
+                        if ($optional_order && $key==='model_order') { continue; }
                         if ($kind==='prices' && $key==='device_name') { continue; }
                         $cell=$sheet->getCell([$i+1,$row]);
                         if ($cell->getDataType()==='f') { throw new \RuntimeException("Лист «{$title}», строка $row: формула в поле «{$headers[$i]}» недопустима. Вставьте значение."); }
@@ -93,7 +96,7 @@ final class Workbook
                 if ($index===0) { foreach (['image1','image2','image3'] as $key) { if (!empty($data[$key.'_id'])) { $data[$key]=wp_get_attachment_url((int)$data[$key.'_id']); } } }
                 foreach ($keys as $c=>$key) {
                     $value=$data[$key]??'';
-                    $numeric=in_array($key,['work_amount','total_amount','order'],true) && $value!==null && $value!=='';
+                    $numeric=in_array($key,['work_amount','total_amount','order','model_order'],true) && $value!==null && $value!=='';
                     $sheet->setCellValueExplicit([$c+1,$r], $value??'', $numeric ? \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC : \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 }
                 if ($index===1) {
@@ -126,12 +129,21 @@ final class Workbook
                 $validation->setType('list')->setErrorStyle('stop')->setAllowBlank(true)->setShowDropDown(true)->setShowErrorMessage(true)->setErrorTitle('Выберите значение')->setError('Используйте значение из списка.')->setFormula1('"'.implode(',',$values).'"');
                 $sheet->setDataValidation($column.'8:'.$column.($index===0?1007:5007),$validation);
             }
+            if ($index===0) {
+                $validation=new \PhpOffice\PhpSpreadsheet\Cell\DataValidation();
+                $validation->setType('whole')->setOperator('between')->setFormula1('0')->setFormula2('99999')->setAllowBlank(true)->setShowErrorMessage(true)->setErrorStyle('stop')->setError('Введите целое число от 0 до 99999.');
+                $sheet->setDataValidation('O8:O1007',$validation);
+            }
         }
         $guide=$book->createSheet()->setTitle('Инструкция');
         $guide->getColumnDimension('A')->setWidth(110);
         $lines=['СЕРВИС 101 — работа с Excel','1. Скачайте свежий экспорт из WordPress перед редактированием.','2. Устройства: одна строка на модель. Код устройства постоянный; для новой модели задайте новый код, например D0118.','3. Услуги и цены: одна строка на пару устройства и услуги. Общий код услуги должен иметь одинаковое название во всех строках.','4. Вставляйте прямую HTTPS-ссылку на JPG, PNG или WebP. Фотографии будут загружены в медиатеку.','5. Числовые цены вводите без ₽. «Бесплатно» — ноль; «По запросу» и «После диагностики» — без числа.','6. Пустые необязательные поля сохраняют прежние данные. Для очистки напишите [очистить].','7. Скрывайте услуги и устройства явно через «Действие» и «Публикация». Пропущенные строки не удаляются.','8. Загрузите книгу в «Каталог → Импорт Excel», проверьте отчёт и примените изменения. Ошибки блокируют весь пакет.','9. Если каталог изменился после выгрузки или проверки, скачайте новый экспорт и повторите изменения.','10. Последний применённый пакет можно восстановить из журнала, пока каталог не изменён снова.','Лимиты: 8 МБ, 1000 устройств, 5000 строк услуг. Не используйте макросы и формулы в импортируемых полях.'];
         foreach ($lines as $i=>$line) { $guide->setCellValue('A'.($i+1),$line); $guide->getRowDimension($i+1)->setRowHeight($i===0?36:44); }
-        $guide->getStyle('A1:A12')->getAlignment()->setWrapText(true)->setVertical('center'); $guide->getStyle('A1')->getFont()->setBold(true)->setSize(20);
+        $guide->setCellValue('A13','Порядок модели: целое число 0–99999. Меньше число — выше модель в списке бренда выбранной категории. По умолчанию 1000; при равенстве сохраняется прежний порядок. Порядок брендов в каждой категории задаётся в админке.');
+        $guide->getRowDimension(13)->setRowHeight(60);
+        $guide->setCellValue('A14','Категории и бренды выбирайте по справочникам WordPress. Если код категории или бренда уже существует, его название берётся из админки. Новые справочники из Excel создаются при импорте устройства.');
+        $guide->getRowDimension(14)->setRowHeight(60);
+        $guide->getStyle('A1:A14')->getAlignment()->setWrapText(true)->setVertical('center'); $guide->getStyle('A1')->getFont()->setBold(true)->setSize(20);
         $book->setActiveSheetIndex(0);
         // The lookup results are already known from the same exported device map.
         // Seed the public calculation cache so exporting 1941 rows avoids repeated table scans.
