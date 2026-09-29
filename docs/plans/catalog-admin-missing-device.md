@@ -12,7 +12,7 @@ Date: 2026-09-29. Deployment target: existing Beget WordPress staging only.
 
 ## Missing-device workflow
 
-- Place a clear “Нет моего устройства” button in the right side of the selection panel, with the repair count reduced to secondary information.
+- Keep the repair count large and prominent at the top of the right-side card, with a compact secondary “Нет моего устройства” button below (owner refinement, 2026-09-29).
 - Open a dedicated accessible dialog without services or an assumed selected device. Name and phone are required; brand, model and comment are optional.
 - Normalize phone entry to +7 and format it in all feedback forms. Verify typing, pasted numbers, deletion and incomplete input.
 - Save requests before reporting success. Add protected admin table, status changes, date filtering, request counts and frequent missing brands/models. Mark staging submissions as tests; preserve disabled staging mail.
