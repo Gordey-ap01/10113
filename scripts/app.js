@@ -494,7 +494,7 @@
         const dialog = form.closest("dialog");
         window.setTimeout(() => {
           if (dialog?.open) dialog.close();
-          showSubmissionToast(payload.message || "Заявка принята. Мастер скоро свяжется с вами.");
+          showSubmissionDialog(payload.message || "Заявка принята. Мастер скоро свяжется с вами.");
         }, 900);
       }
     } catch (error) {
@@ -514,18 +514,19 @@
     }
   }
 
-  function showSubmissionToast(message) {
-    document.querySelectorAll(".submission-toast").forEach((toast) => toast.remove());
-    const toast = document.createElement("div");
-    toast.className = "submission-toast";
-    toast.setAttribute("role", "status");
-    toast.textContent = message;
-    document.body.append(toast);
-    requestAnimationFrame(() => toast.classList.add("is-visible"));
-    window.setTimeout(() => {
-      toast.classList.remove("is-visible");
-      window.setTimeout(() => toast.remove(), 220);
-    }, 4200);
+  function showSubmissionDialog(message) {
+    let dialog = document.querySelector(".submission-dialog");
+    if (!dialog) {
+      dialog = document.createElement("dialog");
+      dialog.className = "submission-dialog";
+      dialog.setAttribute("aria-labelledby", "submission-dialog-title");
+      dialog.innerHTML = `<div class="submission-dialog__icon" aria-hidden="true">✓</div><h2 id="submission-dialog-title">Заявка принята</h2><p></p><button class="btn btn-primary" type="button">Понятно</button>`;
+      document.body.append(dialog);
+      dialog.querySelector("button").addEventListener("click", () => dialog.close());
+      dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+    }
+    dialog.querySelector("p").textContent = message;
+    dialog.showModal();
   }
 
   function ensureHiddenFormField(form, name, value) {
