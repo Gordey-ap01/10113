@@ -21,6 +21,9 @@
   line-height: 1.2;
   white-space: nowrap;
   text-align: center;
+  /* Keep the compact action aligned with the model selector row. */
+  margin-top: 52px;
+  margin-bottom: 15px;
 }
 
 .catalog-help .catalog-help__button:hover { background: var(--sky-50, #f0f9ff); transform: translateY(-1px); }
@@ -29,12 +32,12 @@
 .catalog-help__proof {
   display: grid;
   flex: 1;
-  min-height: 172px;
+  min-height: 112px;
   align-content: center;
   justify-items: center;
   gap: 8px;
   margin: 0;
-  padding: 24px 16px;
+  padding: 18px 16px;
   border-radius: 12px;
   background: linear-gradient(180deg, var(--sky-600, #0284c7) 0%, var(--sky-700, #0369a1) 100%);
   color: rgba(255, 255, 255, .82);
@@ -44,7 +47,7 @@
   box-shadow: 0 18px 32px rgba(2, 132, 199, .24);
 }
 
-.catalog-help__proof strong { color: #fff; font-size: 56px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.catalog-help__proof strong { color: #fff; font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .catalog-help__proof .brand-counter__brand { color: rgba(255, 255, 255, .9); font-size: 14px; }
 
 .missing-device-modal {
@@ -77,6 +80,8 @@
   .catalog-help { grid-row: auto; }
   .catalog-help__proof { min-height: 136px; padding: 20px 16px; }
   .catalog-help__proof strong { font-size: 44px; }
+  .catalog-help .catalog-help__button { margin-top: 0; }
+  .catalog-help .catalog-help__button { margin-bottom: 0; }
   .catalog-help .catalog-help__button { min-height: 44px; }
   .missing-device-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
   .missing-device-modal .modal__head, .missing-device-form { padding: 20px; }
