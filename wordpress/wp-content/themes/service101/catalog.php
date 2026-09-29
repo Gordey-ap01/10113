@@ -35,9 +35,7 @@ get_header();
 </div>
 <aside class="catalog-help" aria-label="Помощь с выбором устройства">
   <p class="catalog-help__proof" data-brand-counter><span>Уже отремонтировали</span><strong data-brand-counter-value>8 545</strong><span class="brand-counter__brand">устройств всего</span></p>
-  <div class="catalog-help__action">
-    <button class="btn catalog-help__button" type="button" data-open-missing-device aria-haspopup="dialog">Нет моего устройства <span aria-hidden="true">↗</span></button>
-  </div>
+  <button class="btn catalog-help__button" type="button" data-open-missing-device aria-haspopup="dialog">Нет моего устройства <span aria-hidden="true">↗</span></button>
 </aside>
 </div></div></section>
 <section class="section catalog-section"><div class="container"><div class="device-workspace">
