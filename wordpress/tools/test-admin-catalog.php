@@ -69,6 +69,8 @@ try {
     s101_admin_check(isset(Catalog::devices(false)[$codes[2]]) && !isset(Catalog::devices(false)[$codes[0]]) && !isset(Catalog::devices(false)[$codes[1]]),'public device filtering is unchanged');
     $selected=Catalog::selected_device_terms(['category_slug'=>$token,'brand_slug'=>$brand_term->slug,'category'=>'wrong','brand'=>'wrong']);
     s101_admin_check($selected['category']==='QA category '.$token && $selected['brand']===$brand_term->name,'admin category and brand names come from the selected directory');
+    $moved=Catalog::selected_device_terms(['category_slug'=>$token.'-other','brand_slug'=>$brand_term->slug],$all[$codes[0]]);
+    s101_admin_check($moved['category_slug']===$token.'-other' && $moved['brand_slug']===$brand_term->slug,'existing device can move to another configured category');
     s101_admin_reject(static fn()=>Catalog::selected_device_terms(['category_slug'=>$token.'-other','brand_slug'=>$second_term->slug]),'brand from another category rejected server-side');
     s101_admin_reject(static fn()=>Catalog::selected_device_terms(['category_slug'=>'missing','brand_slug'=>$brand_term->slug]),'unknown category rejected server-side');
     s101_admin_reject(static fn()=>Import::device(['model_order'=>'-1'],$all[$codes[0]]),'negative model order rejected by shared importer');

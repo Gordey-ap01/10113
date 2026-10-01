@@ -9,7 +9,8 @@ existing static site.
 
 For WordPress, the database is the catalog source. Edit devices, categories, brands and
 prices through **Каталог** in the admin area; use its XLSX export/import for bulk changes.
-Imports are checked before applying, and existing device addresses remain stable.
+Imports are checked before applying. A device keeps its model code; changing its category or
+brand intentionally rebuilds its catalog address.
 Editing `data/services.csv` does not update WordPress.
 
 - [Editor guide](docs/wordpress-editor-guide.md): admin editing, ordering and missing-device requests.
@@ -25,6 +26,8 @@ isolated staging installation, using its actual path and an administrator login:
 ```sh
 node wordpress/tools/test-phone.mjs
 wp --path=/path/to/staging eval-file wordpress/tools/test-admin-catalog.php --user=ADMIN_LOGIN
+wp --path=/path/to/staging eval-file wordpress/tools/test-delete-catalog.php --user=ADMIN_LOGIN
+wp --path=/path/to/staging eval-file wordpress/tools/test-admin-delete-ui.php --user=ADMIN_LOGIN
 wp --path=/path/to/staging eval-file wordpress/tools/test-missing-requests.php --user=ADMIN_LOGIN
 wp --path=/path/to/staging eval-file wordpress/tools/test-workbook-security.php --user=ADMIN_LOGIN
 wp --path=/path/to/staging eval-file wordpress/tools/test-http.php --user=ADMIN_LOGIN

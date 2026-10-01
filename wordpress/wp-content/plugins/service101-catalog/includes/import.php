@@ -71,7 +71,7 @@ final class Import
             }
             $data[$key]=$data[$key]?:Catalog::slug($data[$source]);
             if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/D',$data[$key])) { throw new \InvalidArgumentException('Код раздела/бренда/модели: латинские буквы, цифры, дефисы и подчёркивания.'); }
-            if ($before && $data[$key]!==$before[$key]) { throw new \InvalidArgumentException('Существующие коды адреса нельзя менять импортом. Название можно менять свободно.'); }
+            if ($before && $key==='model_slug' && $data[$key]!==$before[$key]) { throw new \InvalidArgumentException('Код модели в адресе существующего устройства менять нельзя. Название, категорию и бренд можно менять свободно.'); }
             if ($key!=='model_slug') {
                 $term=Catalog::term_by_slug('s101_'.$source,$data[$key]);
                 if ($term) { $data[$source]=$term->name; }
@@ -83,7 +83,7 @@ final class Import
         $path=$data['path']?:$expected;
         if (str_starts_with($path,'https://')) { $path=(string)wp_parse_url($path,PHP_URL_PATH); }
         $path='/'.ltrim(preg_replace('~index\.html$~','',$path),'/'); $path=rtrim($path,'/').'/';
-        if ($path!==$expected || ($before && $path!==$before['path'])) { throw new \InvalidArgumentException('Адрес должен соответствовать категории, бренду и модели: '.$expected); }
+        if ($path!==$expected) { throw new \InvalidArgumentException('Адрес должен соответствовать категории, бренду и модели: '.$expected); }
         $data['path']=$path;
         foreach (['image1','image2','image3'] as $key) {
             $url=str_replace(' ','%20',$data[$key]??'');

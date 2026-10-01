@@ -143,6 +143,87 @@ final class Catalog
         return $counts;
     }
 
+    /** Permanently removes one device and all of its price rows. Media-library files are kept. */
+    public static function delete_device(string $code,int $expected_revision): array
+    {
+        global $wpdb;
+        $code=strtoupper(trim($code));
+        if (!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/D',$code)) { throw new \InvalidArgumentException('Некорректный код устройства.'); }
+        self::assert_db($wpdb->query('START TRANSACTION'));
+        try {
+            self::lock_revision($expected_revision);
+            $row=$wpdb->get_row($wpdb->prepare('SELECT code,post_id FROM '.self::table('devices').' WHERE code=%s FOR UPDATE',$code),ARRAY_A);
+            if (!$row) { throw new \InvalidArgumentException('Устройство уже удалено или не найдено.'); }
+            $service_codes=self::delete_device_rows([$row]);
+            self::finish_delete_transaction($service_codes);
+        } catch (\Throwable $error) { $wpdb->query('ROLLBACK'); wp_cache_flush(); throw $error; }
+        wp_cache_flush();
+        return ['devices'=>1];
+    }
+
+    /** Permanently removes a category/brand and every device that belongs to it. */
+    public static function delete_term(string $taxonomy,int $term_id,int $expected_revision): array
+    {
+        global $wpdb;
+        if (!in_array($taxonomy,['s101_category','s101_brand'],true)) { throw new \InvalidArgumentException('Неизвестный справочник.'); }
+        $term=get_term($term_id,$taxonomy);
+        if (!$term instanceof \WP_Term) { throw new \InvalidArgumentException('Категория или бренд уже удалены.'); }
+        $key=$taxonomy==='s101_category'?'category_slug':'brand_slug';
+        self::assert_db($wpdb->query('START TRANSACTION'));
+        try {
+            self::lock_revision($expected_revision);
+            $rows=[];
+            foreach ($wpdb->get_results('SELECT code,post_id,data FROM '.self::table('devices').' FOR UPDATE',ARRAY_A) as $row) {
+                $data=json_decode((string)$row['data'],true);
+                if (is_array($data) && ($data[$key]??null)===$term->slug) { $rows[]=$row; }
+            }
+            $service_codes=self::delete_device_rows($rows);
+            if ($taxonomy==='s101_category') {
+                foreach (self::terms('s101_brand') as $brand) {
+                    $categories=get_term_meta($brand->term_id,'s101_category_slugs',true);
+                    $orders=get_term_meta($brand->term_id,'s101_category_orders',true);
+                    if (is_array($categories)) { update_term_meta($brand->term_id,'s101_category_slugs',array_values(array_diff($categories,[$term->slug]))); }
+                    if (is_array($orders) && array_key_exists($term->slug,$orders)) { unset($orders[$term->slug]); update_term_meta($brand->term_id,'s101_category_orders',$orders); }
+                }
+            }
+            $deleted=wp_delete_term($term_id,$taxonomy);
+            if (is_wp_error($deleted) || $deleted===false) { throw new \RuntimeException(is_wp_error($deleted)?$deleted->get_error_message():'Не удалось удалить категорию или бренд.'); }
+            self::finish_delete_transaction($service_codes);
+        } catch (\Throwable $error) { $wpdb->query('ROLLBACK'); wp_cache_flush(); throw $error; }
+        wp_cache_flush();
+        return ['devices'=>count($rows)];
+    }
+
+    private static function lock_revision(int $expected_revision): void
+    {
+        global $wpdb;
+        $revision=(int)$wpdb->get_var('SELECT revision FROM '.self::table('state').' WHERE id=1 FOR UPDATE');
+        if ($revision!==$expected_revision) { throw new \RuntimeException('Каталог изменился. Обновите страницу и повторите удаление.'); }
+    }
+
+    private static function delete_device_rows(array $rows): array
+    {
+        global $wpdb; $service_codes=[];
+        foreach ($rows as $row) {
+            $code=(string)$row['code']; $post_id=(int)$row['post_id'];
+            $service_codes=array_merge($service_codes,$wpdb->get_col($wpdb->prepare('SELECT service_code FROM '.self::table('prices').' WHERE device_code=%s',$code)));
+            self::assert_db($wpdb->delete(self::table('prices'),['device_code'=>$code],['%s']));
+            self::assert_db($wpdb->delete(self::table('devices'),['code'=>$code],['%s']));
+            if ($post_id && !wp_delete_post($post_id,true)) { throw new \RuntimeException('Не удалось полностью удалить запись устройства.'); }
+        }
+        return array_values(array_unique(array_map('strval',$service_codes)));
+    }
+
+    private static function finish_delete_transaction(array $service_codes): void
+    {
+        global $wpdb;
+        foreach ($service_codes as $service_code) {
+            self::assert_db($wpdb->query($wpdb->prepare('DELETE FROM '.self::table('services').' WHERE code=%s AND NOT EXISTS (SELECT 1 FROM '.self::table('prices').' WHERE service_code=%s)',$service_code,$service_code)));
+        }
+        self::assert_db($wpdb->query('UPDATE '.self::table('state').' SET revision=revision+1 WHERE id=1'));
+        self::assert_db($wpdb->query('COMMIT'));
+    }
+
     /** Resolve admin selections on the server; submitted display names and slugs are not trusted. */
     public static function selected_device_terms(array $input,?array $before=null): array
     {
@@ -151,7 +232,6 @@ final class Catalog
         $brand=self::term_by_slug('s101_brand',(string)($input['brand_slug']??''));
         if (!$category || !$brand) { throw new \InvalidArgumentException('Выберите категорию и бренд из существующих справочников.'); }
         if (!in_array($category->slug,self::brand_categories($brand),true)) { throw new \InvalidArgumentException('Этот бренд не относится к выбранной категории. Сначала измените категории бренда.'); }
-        if ($before && ($before['category_slug']!==$category->slug || $before['brand_slug']!==$brand->slug)) { throw new \InvalidArgumentException('У существующей модели категория и бренд закреплены в адресе. Для переноса нужна отдельная миграция URL.'); }
         $input['category']=$category->name; $input['brand']=$brand->name;
         return $input;
     }
