@@ -34,6 +34,8 @@ if ($code!=='') {
     s101_delete_ui_check(!preg_match('/id="s101-device-category"[^>]*disabled/',$editor),'existing device category remains editable');
     s101_delete_ui_check(!preg_match('/id="s101-device-brand"[^>]*disabled/',$editor),'existing device brand remains editable');
     s101_delete_ui_check(str_contains($editor,'class="button button-small s101-remove-service"'),'existing service rows have explicit delete controls');
+    s101_delete_ui_check((bool)preg_match('/data-delete-flag name="prices\[\d+\]\[_delete\]" value="0"/',$editor),'service rows are not marked for deletion by default');
+    s101_delete_ui_check((bool)preg_match('/class="button button-small s101-remove-service" type="button"/',$editor),'delete-row control cannot submit the form by itself');
     s101_delete_ui_check(str_contains($editor,'data-price-amount="total"') && str_contains($editor,'type="number" min="0" step="0.01"'),'price inputs accept numeric zero');
     s101_delete_ui_check(str_contains($editor,'type.value="Фиксированная"'),'entering an amount switches a nonnumeric price type');
 }

@@ -5,7 +5,8 @@ use Service101\Import;
 use Service101\Images;
 if (wp_get_environment_type()!=='staging' || !current_user_can('manage_options')) { throw new RuntimeException('Staging administrator only.'); }
 function verify_s101(bool $condition,string $message): void { if (!$condition) { throw new RuntimeException($message); } echo 'PASS '.$message."\n"; }
-$devices=Catalog::devices(true); $prices=Catalog::prices(); $first=reset($devices); $first_price=reset($prices);
+$devices=Catalog::devices(true); $prices=Catalog::prices(); $first=reset($devices);
+$device_prices=Catalog::prices($first['code']); $first_price=reset($device_prices); $witness_price=next($device_prices);
 $mixed=$first; $mixed['code']=strtolower($mixed['code']);
 $plan=Import::preview(['devices'=>[$first,$mixed],'prices'=>[]]);
 verify_s101(count($plan['errors'])===1,'case variants cannot overwrite or duplicate a code');
@@ -28,6 +29,7 @@ try {
     $current=Catalog::devices(true)[$first['code']];
     verify_s101($current['image1']==='' && $current['image1_id']===0 && !get_post_thumbnail_id($current['post_id']),'explicit image clearing updates catalog and thumbnail');
     verify_s101(count(Catalog::prices($first['code'],false))===count(array_filter($prices,static fn($p)=>$p['device_code']===$first['code']))-1,'hidden service is excluded from public prices');
+    verify_s101(!$witness_price || isset(Catalog::prices($first['code'])[$first['code'].'|'.$witness_price['service_code']]),'saving another row does not delete an omitted service');
 } finally { Import::restore($batch); }
 $delete=['device_code'=>$first_price['device_code'],'service_code'=>$first_price['service_code'],'_delete'=>'1'];
 $plan=Import::preview(['devices'=>[],'prices'=>[$delete]]); $batch=Import::save_plan($plan); Import::apply($batch);
