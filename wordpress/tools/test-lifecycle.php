@@ -29,6 +29,12 @@ try {
     verify_s101($current['image1']==='' && $current['image1_id']===0 && !get_post_thumbnail_id($current['post_id']),'explicit image clearing updates catalog and thumbnail');
     verify_s101(count(Catalog::prices($first['code'],false))===count(array_filter($prices,static fn($p)=>$p['device_code']===$first['code']))-1,'hidden service is excluded from public prices');
 } finally { Import::restore($batch); }
+$delete=['device_code'=>$first_price['device_code'],'service_code'=>$first_price['service_code'],'_delete'=>'1'];
+$plan=Import::preview(['devices'=>[],'prices'=>[$delete]]); $batch=Import::save_plan($plan); Import::apply($batch);
+try {
+    verify_s101(!isset(Catalog::prices($first_price['device_code'])[$first_price['device_code'].'|'.$first_price['service_code']]),'explicit delete removes the service row from its device');
+} finally { Import::restore($batch); }
+verify_s101(Catalog::prices()===$prices,'deleted service row is restored with the batch snapshot');
 $deny=static function(array $caps): array { $caps['publish_s101_devices']=false; $caps['manage_s101_prices']=false; return $caps; };
 add_filter('user_has_cap',$deny);
 try { $plan=Import::preview(['devices'=>[$new],'prices'=>[$price]]); verify_s101(count($plan['errors'])>=2,'publication and price permissions are enforced'); }

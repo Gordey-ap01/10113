@@ -8,7 +8,7 @@ final class Import
     public static function preview(array $input): array
     {
         $devices=Catalog::devices(true); $prices=Catalog::prices(); $revision=Catalog::revision();
-        $plan=['devices'=>[], 'prices'=>[], 'errors'=>[], 'warnings'=>[], 'counts'=>['new'=>0,'changed'=>0,'hidden'=>0,'same'=>0], 'revision'=>$revision];
+        $plan=['devices'=>[], 'prices'=>[], 'errors'=>[], 'warnings'=>[], 'counts'=>['new'=>0,'changed'=>0,'hidden'=>0,'deleted'=>0,'same'=>0], 'revision'=>$revision];
         if (($input['revision']??null)!==null && $input['revision']!==$revision) { $plan['errors'][]='Каталог изменился после экспорта. Скачайте свежую книгу и повторите правки.'; }
         $seen=[]; $paths=[]; $names=[];
         foreach ($devices as $code=>$device) { $paths[$device['path']]=$code; }
@@ -31,7 +31,14 @@ final class Import
                 $device=self::code($row['device_code']??''); $service=self::code($row['service_code']??''); $key=$device.'|'.$service;
                 if (!isset($devices[$device])) { throw new \InvalidArgumentException('Неизвестное устройство '.$device.'.'); }
                 if (isset($seen[$key])) { throw new \InvalidArgumentException('Повторяется пара устройства и услуги '.$key.'.'); }
-                $seen[$key]=true; $before=$prices[$key]??null; $after=self::price($row,$before);
+                $seen[$key]=true; $before=$prices[$key]??null;
+                if (($row['_delete']??'')==='1') {
+                    if (!$before) { throw new \InvalidArgumentException('Удаляемая строка услуги не найдена.'); }
+                    $plan['counts']['deleted']++;
+                    $plan['prices'][$key]=['before'=>$before,'after'=>null,'state'=>'deleted','row'=>$row['_row']??1];
+                    continue;
+                }
+                $after=self::price($row,$before);
                 if (isset($names[$service]) && $names[$service]!==$after['name']) { throw new \InvalidArgumentException('Для кода '.$service.' указаны разные названия услуги.'); }
                 $names[$service]=$after['name'];
                 self::change($plan,'prices',$key,$before,$after,$row);
@@ -185,12 +192,20 @@ final class Import
                 $change['after']=$data;
             }
             unset($change);
+            $deleted_services=[];
             foreach ($plan['prices'] as $change) {
                 if (!current_user_can('manage_s101_prices')) { throw new \RuntimeException('Нет прав для изменения цен.'); }
+                if (($change['state']??'')==='deleted') {
+                    $data=$change['before'];
+                    Catalog::assert_db($wpdb->delete(Catalog::table('prices'),['device_code'=>$data['device_code'],'service_code'=>$data['service_code']],['%s','%s']));
+                    $deleted_services[]=$data['service_code'];
+                    continue;
+                }
                 $data=$change['after'];
                 Catalog::assert_db($wpdb->replace(Catalog::table('services'),['code'=>$data['service_code'],'name'=>$data['name']]));
                 Catalog::assert_db($wpdb->replace(Catalog::table('prices'),['device_code'=>$data['device_code'],'service_code'=>$data['service_code'],'data'=>Catalog::json($data)]));
             }
+            Catalog::cleanup_unused_services($deleted_services);
             Catalog::assert_db($wpdb->query('UPDATE '.Catalog::table('state').' SET revision=revision+1 WHERE id=1'));
             Catalog::assert_db($wpdb->update(Catalog::table('batches'),['state'=>'applied','plan'=>Catalog::json($plan),'snapshot'=>Catalog::json($snapshot)],['id'=>$id]));
             Catalog::assert_db($wpdb->query('COMMIT'));

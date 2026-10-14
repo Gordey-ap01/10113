@@ -6,9 +6,9 @@ if (!$device) { status_header(404); get_template_part('index'); return; }
 $copy=s101_copy(); $category=Catalog::category($device['category_slug']);
 $info=['title'=>$category['info_title'],'text'=>$category['info_text'],'items'=>$category['info_items']];
 $devices=Catalog::devices(Routes::can_preview()); $prices=array_values(Catalog::prices($device['code'],false));
-$categories=Catalog::categories(Routes::can_preview()); $brands=[]; $models=[];
+$categories=Catalog::categories(Routes::can_preview()); $brands=Catalog::brands_for_category($device['category_slug'],Routes::can_preview(),$devices); $models=[];
 foreach ($devices as $row) {
-    if ($row['category_slug']===$device['category_slug']) { $brands[$row['brand_slug']]??=$row; if ($row['brand_slug']===$device['brand_slug']) { $models[]=$row; } }
+    if ($row['category_slug']===$device['category_slug'] && $row['brand_slug']===$device['brand_slug']) { $models[]=$row; }
 }
 $title=s101_device_name($device); $image=!empty($device['image1_id'])?wp_get_attachment_image_url($device['image1_id'],'large'):'';
 get_header();
@@ -25,7 +25,7 @@ get_header();
     <button class="category-scroller__button category-scroller__button--next" type="button" aria-label="Следующие категории">›</button>
   </div>
   <div class="catalog-controls"><div><p class="control-label">Бренд / тип устройства</p><div class="chip-row brand-chip-row" data-horizontal-scroll>
-    <?php foreach ($brands as $slug=>$row): ?><a class="chip <?php echo $slug===$device['brand_slug']?'active':''; ?>" href="<?php echo esc_url(home_url($row['path'])); ?>"><?php echo esc_html($row['brand']); ?></a><?php endforeach; ?>
+    <?php foreach ($brands as $slug=>$brand): ?><?php if ($brand['device']): ?><a class="chip <?php echo $slug===$device['brand_slug']?'active':''; ?>" href="<?php echo esc_url(home_url($brand['device']['path'])); ?>"><?php echo esc_html($brand['name']); ?></a><?php else: ?><button class="chip chip--empty" type="button" data-open-missing-device data-missing-brand="<?php echo esc_attr($brand['name']); ?>" aria-haspopup="dialog" title="Моделей пока нет — оставить заявку"><?php echo esc_html($brand['name']); ?></button><?php endif; ?><?php endforeach; ?>
   </div></div><div><p class="control-label">Модель</p><div class="model-scroller" data-model-scroller>
     <button class="model-scroller__button model-scroller__button--prev" type="button" aria-label="Предыдущие модели">‹</button>
     <div class="chip-row model-chip-row" data-model-row data-horizontal-scroll>

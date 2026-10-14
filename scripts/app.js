@@ -1227,7 +1227,7 @@
       const missingDeviceTrigger = event.target.closest("[data-open-missing-device]");
       if (missingDeviceTrigger) {
         event.preventDefault();
-        openMissingDeviceModal();
+        openMissingDeviceModal(missingDeviceTrigger);
         return;
       }
       const trigger = event.target.closest("[data-open-booking]");
@@ -1237,7 +1237,7 @@
     });
   }
 
-  function openMissingDeviceModal() {
+  function openMissingDeviceModal(trigger) {
     const dialog = ensureMissingDeviceModal();
     const form = dialog.querySelector("form");
     const status = form.querySelector("[data-form-status]");
@@ -1248,8 +1248,15 @@
     ensureHiddenFormField(form, "Категория", currentDevice?.categorySlug || pageState.category || "");
     ensureHiddenFormField(form, "Страница", `${location.origin}${location.pathname}`);
     const category = currentDevice?.category || pageState.device?.category || "";
+    const presetBrand = trigger?.dataset.missingBrand || "";
+    if (presetBrand && form.elements["Бренд"]) {
+      form.elements["Бренд"].value = presetBrand;
+      if (form.elements["Модель"]) form.elements["Модель"].value = "";
+    }
     const context = dialog.querySelector("[data-missing-device-context]");
-    context.textContent = category ? `Раздел: ${category}` : "Поможем подобрать ремонт";
+    context.textContent = presetBrand
+      ? `${category ? `${category} · ` : ""}${presetBrand}: модели пока нет в каталоге`
+      : category ? `Раздел: ${category}` : "Поможем подобрать ремонт";
     document.body.classList.add("modal-open");
     dialog.showModal();
     form.elements["Имя"].focus();

@@ -143,7 +143,7 @@ final class Requests
 
     public static function menu(): void
     {
-        add_submenu_page('s101-catalog','Нет моего устройства — заявки','Нет устройства — заявки','manage_s101_catalog','s101-requests',[self::class,'page']);
+        add_submenu_page('s101-categories','Нет моего устройства — заявки','Нет устройства — заявки','manage_s101_catalog','s101-requests',[self::class,'page']);
     }
 
     private static function date_value(mixed $value): string

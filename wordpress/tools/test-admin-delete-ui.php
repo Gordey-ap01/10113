@@ -17,6 +17,10 @@ function s101_render_admin(array $query): string {
 $listing=s101_render_admin(['page'=>'s101-catalog']);
 s101_delete_ui_check(str_contains($listing,'value="delete_device"'),'device list renders permanent delete actions');
 s101_delete_ui_check(str_contains($listing,'Удалить устройство полностью'),'device deletion requires a confirmation prompt');
+$category_position=strpos($listing,'>Категории</b>');
+$brand_position=strpos($listing,'>Бренды</b>');
+$device_position=strpos($listing,'>Устройства</b>');
+s101_delete_ui_check($category_position!==false && $category_position<$brand_position && $brand_position<$device_position,'catalog workflow is category, brand, then device');
 
 $categories=s101_render_admin(['page'=>'s101-categories']);
 s101_delete_ui_check(str_contains($categories,'value="delete_category"'),'category list renders cascade delete actions');
@@ -29,4 +33,7 @@ if ($code!=='') {
     $editor=s101_render_admin(['page'=>'s101-catalog','edit'=>$code]);
     s101_delete_ui_check(!preg_match('/id="s101-device-category"[^>]*disabled/',$editor),'existing device category remains editable');
     s101_delete_ui_check(!preg_match('/id="s101-device-brand"[^>]*disabled/',$editor),'existing device brand remains editable');
+    s101_delete_ui_check(str_contains($editor,'class="button button-small s101-remove-service"'),'existing service rows have explicit delete controls');
+    s101_delete_ui_check(str_contains($editor,'data-price-amount="total"') && str_contains($editor,'type="number" min="0" step="0.01"'),'price inputs accept numeric zero');
+    s101_delete_ui_check(str_contains($editor,'type.value="Фиксированная"'),'entering an amount switches a nonnumeric price type');
 }

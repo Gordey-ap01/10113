@@ -217,9 +217,7 @@ final class Catalog
     private static function finish_delete_transaction(array $service_codes): void
     {
         global $wpdb;
-        foreach ($service_codes as $service_code) {
-            self::assert_db($wpdb->query($wpdb->prepare('DELETE FROM '.self::table('services').' WHERE code=%s AND NOT EXISTS (SELECT 1 FROM '.self::table('prices').' WHERE service_code=%s)',$service_code,$service_code)));
-        }
+        self::cleanup_unused_services($service_codes);
         self::assert_db($wpdb->query('UPDATE '.self::table('state').' SET revision=revision+1 WHERE id=1'));
         self::assert_db($wpdb->query('COMMIT'));
     }
@@ -263,6 +261,21 @@ final class Catalog
         $result=[];
         foreach (self::terms('s101_category') as $term) { if (isset($device_categories[$term->slug])) { $result[$term->slug]=self::category($term->slug); } }
         uasort($result,static fn($a,$b)=>($a['sort_order']<=>$b['sort_order']) ?: strnatcasecmp($a['title'],$b['title']));
+        return $result;
+    }
+
+    /** All brands assigned to a category, including brands that do not have a model yet. */
+    public static function brands_for_category(string $category_slug,bool $include_hidden=false,?array $devices=null): array
+    {
+        $devices??=self::devices($include_hidden); $usage=self::brand_usage($devices); $first_device=[]; $result=[];
+        foreach ($devices as $device) {
+            if ($device['category_slug']===$category_slug && !isset($first_device[$device['brand_slug']])) { $first_device[$device['brand_slug']]=$device; }
+        }
+        foreach (self::terms('s101_brand') as $term) {
+            if (!in_array($category_slug,self::brand_categories($term,$usage),true)) { continue; }
+            $result[$term->slug]=['slug'=>$term->slug,'name'=>$term->name,'order'=>self::brand_order($term,$category_slug),'device'=>$first_device[$term->slug]??null];
+        }
+        uasort($result,static fn(array $a,array $b): int => ($a['order']<=>$b['order']) ?: strnatcasecmp($a['name'],$b['name']));
         return $result;
     }
 
@@ -313,6 +326,15 @@ final class Catalog
         }
         uasort($result, static fn($a,$b)=>($a['order']<=>$b['order']) ?: strcmp($a['service_code'],$b['service_code']));
         return $result;
+    }
+
+    /** Remove shared service definitions only after their final device price was removed. */
+    public static function cleanup_unused_services(array $service_codes): void
+    {
+        global $wpdb;
+        foreach (array_values(array_unique(array_map('strval',$service_codes))) as $service_code) {
+            self::assert_db($wpdb->query($wpdb->prepare('DELETE FROM '.self::table('services').' WHERE code=%s AND NOT EXISTS (SELECT 1 FROM '.self::table('prices').' WHERE service_code=%s)',$service_code,$service_code)));
+        }
     }
 
     public static function status(string $label): string { return ['Черновик'=>'draft','Опубликовать'=>'publish','Скрыть'=>'private'][$label] ?? 'draft'; }

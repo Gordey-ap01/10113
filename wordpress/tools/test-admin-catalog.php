@@ -17,6 +17,14 @@ function s101_admin_reject(callable $action,string $message): void {
 }
 
 $baseline=Catalog::devices(true); $revision=Catalog::revision();
+$catalog_prices=Catalog::prices(); $first_price=reset($catalog_prices);
+if ($first_price) {
+    $zero=Import::price(['total_type'=>'Фиксированная','total_amount'=>'0'],$first_price);
+    s101_admin_check($zero['total_type']==='Фиксированная' && $zero['total_amount']==='0.00','zero is a valid fixed total price');
+    $delete_plan=Import::preview(['devices'=>[],'prices'=>[['device_code'=>$first_price['device_code'],'service_code'=>$first_price['service_code'],'_delete'=>'1']],'revision'=>$revision]);
+    $delete_changes=$delete_plan['prices']; $delete_change=reset($delete_changes);
+    s101_admin_check(!$delete_plan['errors'] && $delete_plan['counts']['deleted']===1 && $delete_change['state']==='deleted','explicit service row deletion is represented in preview');
+}
 s101_admin_reject(static fn()=>Catalog::save_term('s101_category',['name'=>'QA stale','revision'=>$revision-1]),'stale term form rejected before writing');
 s101_admin_check(Catalog::revision()===$revision,'failed term edit leaves catalog revision unchanged');
 $categories=array_column(Catalog::terms('s101_category'),'slug');
@@ -48,6 +56,8 @@ try {
     update_term_meta($category['term_id'],'s101_home_enabled','0');
     s101_admin_check(Catalog::category($token)['sort_order']===0 && !Catalog::category($token)['home_enabled'],'zero weights and disabled home flag are preserved');
     s101_admin_check(Catalog::brand_order($brand_term,$token)===100 && Catalog::brand_order($brand_term,$token.'-other')===0,'same brand has separate category weights');
+    $configured=Catalog::brands_for_category($token,true);
+    s101_admin_check(isset($configured[$brand_term->slug]) && $configured[$brand_term->slug]['device']===null,'configured brand is visible before its first model exists');
 
     $codes=[];
     foreach ([['draft',$brand_term,100],['private',$brand_term,0],['publish',$second_term,1000]] as $i=>[$status,$term,$weight]) {

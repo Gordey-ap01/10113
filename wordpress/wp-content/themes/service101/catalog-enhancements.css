@@ -6,6 +6,18 @@
   gap: 12px;
 }
 
+.brand-chip-row .chip--empty {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.brand-chip-row .chip--empty::after {
+  background: repeating-linear-gradient(90deg, #38bdf8 0 5px, transparent 5px 8px);
+}
+
 .catalog-help .catalog-help__button {
   display: inline-flex;
   width: 100%;
