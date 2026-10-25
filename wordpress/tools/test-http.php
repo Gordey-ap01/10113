@@ -18,7 +18,8 @@ foreach ($devices as $device) { $paths[$device['path']]=true; $paths['/remont/'.
 $paths['/remont/vyezdnoj-remont/']=true;
 foreach (array_keys($paths) as $path) {
     [$status,$body]=$request($path);
-    if ($status!==200 || !str_contains($body,'class="price-row"') || !str_contains($body,'"serverRendered":true')) { throw new RuntimeException('Public catalog route failed: '.$path.' HTTP '.$status); }
+    $has_catalog=str_contains($body,'class="price-row"') || str_contains($body,'Услуги и цены уточняются.');
+    if ($status!==200 || !$has_catalog || !str_contains($body,'"serverRendered":true')) { throw new RuntimeException('Public catalog route failed: '.$path.' HTTP '.$status); }
 }
 foreach (['/','/b2b/'] as $path) { [$status,$body]=$request($path); if ($status!==200 || !str_contains($body,'<form')) { throw new RuntimeException('Page/form failed: '.$path.' HTTP '.$status); } }
 $first=reset($devices);
@@ -29,4 +30,4 @@ foreach (['/wp-config.php','/wp-content/debug.log'] as $path) {
     [$status]=$request($path);
     if ($status!==403) { throw new RuntimeException('Protected file must remain forbidden: '.$path); }
 }
-echo 'PASS '.count($paths)." public catalog routes contain prices without authentication; noindex preserved.\nPASS home/B2B forms, legacy redirects, WordPress admin login and private-file protection.\n";
+echo 'PASS '.count($paths)." public catalog routes contain prices or an explicit empty state without authentication; noindex preserved.\nPASS home/B2B forms, legacy redirects, WordPress admin login and private-file protection.\n";

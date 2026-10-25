@@ -5,21 +5,76 @@ defined('ABSPATH') || exit;
 
 final class Admin
 {
+    private static array $draft=[];
     public static function menu(): void
     {
         add_menu_page('Каталог Сервис 101','Каталог','manage_s101_catalog','s101-categories',[self::class,'page'],'dashicons-smartphone',21);
         add_submenu_page('s101-categories','Категории','1. Категории','manage_s101_catalog','s101-categories',[self::class,'page']);
         add_submenu_page('s101-categories','Бренды','2. Бренды','manage_s101_catalog','s101-brands',[self::class,'page']);
-        add_submenu_page('s101-categories','Устройства','3. Устройства','manage_s101_catalog','s101-catalog',[self::class,'page']);
+        add_submenu_page('s101-categories','Устройства/Модели','3. Устройства/Модели','manage_s101_catalog','s101-catalog',[self::class,'page']);
         add_submenu_page('s101-categories','Импорт Excel','Импорт Excel','import_s101_catalog','s101-import',[self::class,'page']);
         add_submenu_page('s101-categories','История изменений','История изменений','manage_s101_catalog','s101-history',[self::class,'page']);
     }
     private static function url(array $args=[]): string { return add_query_arg(array_merge(['page'=>'s101-catalog'],$args),admin_url('admin.php')); }
     private static function form(string $operation,array $hidden=[]): void
     {
-        echo '<form method="post" enctype="multipart/form-data" action="'.esc_url(admin_url('admin-post.php')).'">';
+        if (!empty($_GET['embedded'])) { $hidden['embedded']='1'; }
+        if (!empty($_GET['services_only'])) { $hidden['services_only']='1'; }
+        echo '<form method="post" data-s101-form data-operation="'.esc_attr($operation).'" enctype="multipart/form-data" action="'.esc_url(admin_url('admin-post.php')).'" novalidate>';
         wp_nonce_field('s101_catalog');
         foreach (array_merge(['action'=>'s101_catalog','operation'=>$operation],$hidden) as $name=>$value) { echo '<input type="hidden" name="'.esc_attr($name).'" value="'.esc_attr((string)$value).'">'; }
+    }
+    private static function redirect(array $args): never
+    {
+        if (!empty($_POST['embedded'])) { $args['embedded']='1'; }
+        if (!empty($_POST['services_only'])) { $args['services_only']='1'; }
+        $url=self::url($args);
+        if (($_POST['_s101_async']??'')==='1') { wp_send_json_success(['url'=>$url]); }
+        wp_safe_redirect($url); exit;
+    }
+
+    /** The editor owns codes and clearing semantics; Excel keeps its partial-update contract. */
+    public static function device_plan(array $device,array $rows,int $revision,string $copy=''): array
+    {
+        if (count($rows)>100) { throw new \InvalidArgumentException('Не больше 100 услуг в карточке.'); }
+        if (empty($device['code'])) { $device['code']='D'.strtoupper(str_replace('-','',wp_generate_uuid4())); }
+        $code=Import::code((string)$device['code']); $device['code']=$code;
+        $before=Catalog::devices(true)[$code]??null;
+        $device=Catalog::selected_device_terms($device,$before);
+        if ($before && ($before['category_slug']!==$device['category_slug'] || $before['brand_slug']!==$device['brand_slug'])) {
+            $device['path']='/remont/'.$device['category_slug'].'/'.$device['brand_slug'].'/'.$before['model_slug'].'/';
+        }
+        foreach (['description','image1','image2','image3'] as $field) {
+            if ($before && array_key_exists($field,$device) && trim((string)$device[$field])==='') { $device[$field]='[очистить]'; }
+        }
+        $existing=Catalog::prices($code); $prices=[];
+        foreach ($rows as $index=>$row) {
+            if (!is_array($row)) { throw new \InvalidArgumentException('Некорректная строка услуги.'); }
+            $service=trim((string)($row['service_code']??''));
+            if ($service==='' && ($row['_delete']??'')==='1') { continue; }
+            if ($service==='' && trim((string)($row['name']??''))==='') {
+                $entered=false;
+                foreach (['total_amount','work_amount','time','badge','description'] as $field) { if (trim((string)($row[$field]??''))!=='') { $entered=true; } }
+                if ($entered) { throw new \InvalidArgumentException('Строка '.($index+1).': укажите название новой услуги.'); }
+                continue;
+            }
+            if ($service==='') { $service='S'.strtoupper(str_replace('-','',wp_generate_uuid4())); }
+            elseif (!isset($existing[$code.'|'.$service])) { throw new \InvalidArgumentException('Неизвестная строка услуги. Обновите карточку.'); }
+            $row['service_code']=$service; $row['device_code']=$code; $row['_row']=$index+1;
+            if (($row['_delete']??'')!=='1') {
+                if (trim((string)($row['name']??''))==='') { throw new \InvalidArgumentException('Строка '.($index+1).': введите название услуги или выберите её для удаления.'); }
+                foreach (['time','badge','description'] as $field) { if (array_key_exists($field,$row) && trim((string)$row[$field])==='') { $row[$field]='[очистить]'; } }
+                foreach (['work','total'] as $part) {
+                    if (in_array($row[$part.'_type']??'', ['Фиксированная','От','Ориентир'],true) && trim((string)($row[$part.'_amount']??''))==='') { throw new \InvalidArgumentException('Строка '.($index+1).': укажите сумму цены, включая 0, или выберите «После диагностики» / «По запросу».'); }
+                }
+            }
+            $prices[]=$row;
+        }
+        if ($copy!=='') {
+            if ($prices) { throw new \InvalidArgumentException('Для копирования набора оставьте таблицу услуг пустой.'); }
+            foreach (Catalog::prices($copy) as $row) { $row['device_code']=$code; $prices[]=$row; }
+        }
+        return Import::preview(['devices'=>[$device],'prices'=>$prices,'revision'=>$revision]);
     }
     public static function action(): void
     {
@@ -42,43 +97,62 @@ final class Admin
                 $term_input['revision']=(int)($_POST['revision']??-1);
                 if ($taxonomy==='s101_category' && !isset($term_input['home_enabled'])) { $term_input['home_enabled']='0'; }
                 $term=Catalog::save_term($taxonomy,$term_input);
-                wp_safe_redirect(self::url(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','saved'=>$term->term_id])); exit;
+                self::redirect(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','saved'=>$term->term_id,'edit_term'=>$term->term_id]);
             } elseif ($operation==='delete_device') {
                 if (($_POST['confirm_delete']??'')!=='1') { throw new \RuntimeException('Подтвердите полное удаление устройства.'); }
                 $result=Catalog::delete_device(sanitize_text_field(wp_unslash($_POST['code']??'')),(int)($_POST['revision']??-1));
-                wp_safe_redirect(self::url(['deleted'=>'device','deleted_devices'=>$result['devices']])); exit;
+                self::redirect(['deleted'=>'device','deleted_devices'=>$result['devices']]);
             } elseif (in_array($operation,['delete_category','delete_brand'],true)) {
                 if (($_POST['confirm_delete']??'')!=='1') { throw new \RuntimeException('Подтвердите полное удаление категории или бренда.'); }
                 $taxonomy=$operation==='delete_category'?'s101_category':'s101_brand';
                 $result=Catalog::delete_term($taxonomy,absint($_POST['term_id']??0),(int)($_POST['revision']??-1));
-                wp_safe_redirect(self::url(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','deleted'=>$taxonomy,'deleted_devices'=>$result['devices']])); exit;
+                self::redirect(['page'=>$taxonomy==='s101_category'?'s101-categories':'s101-brands','deleted'=>$taxonomy,'deleted_devices'=>$result['devices']]);
             } elseif ($operation==='save') {
+                if (($_POST['_s101_complete']??'')!=='1') { throw new \RuntimeException('Сервер получил форму не полностью. Данные остались в форме. Уменьшите количество строк и повторите.'); }
                 $device=wp_unslash($_POST['device']??[]); $rows=wp_unslash($_POST['prices']??[]);
                 if (!is_array($device) || !is_array($rows) || count($rows)>100) { throw new \RuntimeException('Некорректная форма устройства.'); }
-                $code=Import::code((string)($device['code']??''));
-                $before=Catalog::devices(true)[$code]??null;
-                $device=Catalog::selected_device_terms($device,$before);
-                if ($before && ($before['category_slug']!==$device['category_slug'] || $before['brand_slug']!==$device['brand_slug'])) {
-                    $device['path']='/remont/'.$device['category_slug'].'/'.$device['brand_slug'].'/'.$before['model_slug'].'/';
-                }
-                $prices=[];
-                foreach ($rows as $row) { if (!is_array($row)) { throw new \RuntimeException('Некорректная строка услуги.'); } if (empty($row['service_code']) && empty($row['name'])) { continue; } $row['device_code']=$device['code']??''; $prices[]=$row; }
                 $copy=sanitize_text_field(wp_unslash($_POST['copy_from']??''));
-                if ($copy!=='') { foreach (Catalog::prices($copy) as $row) { $row['device_code']=$device['code']??''; $prices[]=$row; } }
-                $plan=Import::preview(['devices'=>[$device],'prices'=>$prices,'revision'=>(int)($_POST['revision']??-1)]); $id=Import::save_plan($plan);
+                $plan=self::device_plan($device,$rows,(int)($_POST['revision']??-1),$copy);
+                if ($plan['errors']) { throw new \InvalidArgumentException(implode("\n",$plan['errors'])); }
+                $token=wp_generate_uuid4();
+                set_transient('s101_form_'.get_current_user_id().'_'.$token,['device'=>$device,'prices'=>$rows,'copy_from'=>$copy,'revision'=>(int)($_POST['revision']??-1)],30*MINUTE_IN_SECONDS);
+                $plan['editor_draft']=$token;
+                $id=Import::save_plan($plan);
             } elseif ($operation==='apply') { $id=absint($_POST['batch']??0); Import::apply($id); }
             elseif ($operation==='restore') { $id=absint($_POST['batch']??0); Import::restore($id); }
             else { throw new \RuntimeException('Неизвестное действие.'); }
-            wp_safe_redirect(self::url(['batch'=>$id])); exit;
-        } catch (\Throwable $error) { wp_die(esc_html($error->getMessage()).'<p><a href="'.esc_url(self::url(['page'=>'s101-import'])).'">Вернуться в каталог</a></p>','Каталог Сервис 101',['response'=>400]); }
+            self::redirect(['batch'=>$id]);
+        } catch (\Throwable $error) {
+            if (($_POST['_s101_async']??'')==='1') { wp_send_json_error(['message'=>$error->getMessage()],422); }
+            // Without JavaScript, return to the same editor with a short-lived, user-bound draft.
+            if (in_array($operation,['save','save_category','save_brand'],true)) {
+                $token=wp_generate_uuid4(); $draft=['message'=>$error->getMessage()];
+                foreach (['device','prices','term','revision','copy_from'] as $key) { if (isset($_POST[$key])) { $draft[$key]=wp_unslash($_POST[$key]); } }
+                set_transient('s101_form_'.get_current_user_id().'_'.$token,$draft,30*MINUTE_IN_SECONDS);
+                $args=['form_draft'=>$token];
+                if ($operation==='save') { $args['edit']=sanitize_text_field(!empty($draft['device']['code'])?$draft['device']['code']:'new'); }
+                else { $args['page']=$operation==='save_brand'?'s101-brands':'s101-categories'; $args['edit_term']=absint($draft['term']['term_id']??0); }
+                self::redirect($args);
+            }
+            wp_die(esc_html($error->getMessage()).'<p><a href="'.esc_url(self::url()).'">Вернуться в каталог</a></p>','Каталог Сервис 101',['response'=>400]);
+        }
     }
     public static function page(): void
     {
         if (!current_user_can('manage_s101_catalog')) { return; }
+        self::$draft=[];
+        if (isset($_GET['form_draft'])) {
+            $token=sanitize_key(wp_unslash($_GET['form_draft']));
+            self::$draft=(array)get_transient('s101_form_'.get_current_user_id().'_'.$token);
+        }
         echo '<div class="wrap s101-admin"><h1>Каталог Сервис 101</h1><p>Устройства, услуги и цены · версия '.Catalog::revision().'</p>';
         echo '<style>.s101-admin .card{max-width:none;padding:24px;margin:20px 0}.s101-admin label{display:block;font-weight:600;margin:12px 0 4px}.s101-admin input:not([type=hidden]),.s101-admin select,.s101-admin textarea{width:100%;max-width:100%}.s101-admin .s101-grid{display:grid;grid-template-columns:repeat(2,minmax(200px,1fr));gap:16px}.s101-admin td{vertical-align:top}.s101-admin .s101-scroll{overflow:auto}.s101-admin .s101-prices{min-width:1520px}.s101-admin .s101-prices input{min-width:90px}.s101-admin .button{width:auto!important}.s101-admin .s101-good{color:#087648}.s101-admin .s101-bad{color:#b32d2e}.s101-admin .s101-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.s101-admin .s101-actions form{margin:0}.s101-admin .s101-delete{color:#b32d2e;border-color:#b32d2e}.s101-admin .s101-delete:hover{color:#fff;background:#b32d2e;border-color:#b32d2e}.s101-admin .s101-flow{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;max-width:980px;margin:20px 0}.s101-admin .s101-flow a{display:flex;align-items:center;gap:12px;padding:16px 18px;border:1px solid #c3c4c7;border-radius:10px;background:#fff;color:#1d2327;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}.s101-admin .s101-flow a.is-active{border-color:#2271b1;box-shadow:0 0 0 1px #2271b1}.s101-admin .s101-flow strong{display:grid;width:32px;height:32px;place-items:center;border-radius:50%;background:#eaf5ff;color:#135e96;font-size:16px}.s101-admin tr.s101-row-deleted{opacity:.58;background:#fff1f0}.s101-admin tr.s101-row-deleted td:not(:last-child){text-decoration:line-through}.s101-admin .s101-remove-service{white-space:nowrap}@media(max-width:782px){.s101-admin .s101-grid,.s101-admin .s101-flow{grid-template-columns:1fr}}</style>';
-        self::flow();
+        if (empty($_GET['embedded'])) { self::flow(); }
+        else { echo '<style>#adminmenumain,#wpadminbar,#wpfooter,#screen-meta-links,.update-nag{display:none!important}#wpcontent,#wpfooter{margin-left:0!important}html.wp-toolbar{padding-top:0!important}.s101-admin>h1,.s101-admin>h1+p{display:none}</style>'; }
+        echo '<div class="s101-live" role="status" aria-live="polite"></div>';
+        if (!empty(self::$draft['message'])) { echo '<div class="notice notice-error"><p>'.nl2br(esc_html(self::$draft['message'])).'</p><p>Данные сохранены в форме. Исправьте указанные поля и повторите.</p></div>'; }
         try {
+            if (isset($_GET['saved'])) { echo '<div class="notice notice-success" role="status"><p>Изменения сохранены. Каталог сайта обновлён.</p></div>'; }
             if (isset($_GET['deleted'])) { echo '<div class="notice notice-success is-dismissible"><p>Удаление выполнено полностью. Удалено устройств: '.absint($_GET['deleted_devices']??0).'.</p></div>'; }
             if (isset($_GET['batch'])) { self::report(absint($_GET['batch'])); }
             elseif (isset($_GET['edit'])) { self::editor(sanitize_text_field(wp_unslash($_GET['edit']))); }
@@ -88,13 +162,13 @@ final class Admin
             elseif (($_GET['page']??'')==='s101-history') { self::history(); }
             else { self::listing(); }
         } catch (\Throwable $error) { echo '<div class="notice notice-error"><p>'.esc_html($error->getMessage()).'</p></div>'; }
-        echo '</div>';
+        echo '<p class="s101-credit">Разработка <span translate="no">Gordey_ap01</span></p></div>';
     }
     private static function flow(): void
     {
         $page=sanitize_key($_GET['page']??'s101-categories');
         $counts=[count(Catalog::terms('s101_category')),count(Catalog::terms('s101_brand')),count(Catalog::devices(true))];
-        $steps=[['s101-categories','Категории','направления ремонта'],['s101-brands','Бренды','производители'],['s101-catalog','Устройства','модели и цены']];
+        $steps=[['s101-categories','Категории','направления ремонта'],['s101-brands','Бренды','производители'],['s101-catalog','Устройства/Модели','модели и цены']];
         echo '<nav class="s101-flow" aria-label="Порядок заполнения каталога">';
         foreach ($steps as $index=>[$slug,$title,$caption]) {
             echo '<a class="'.($page===$slug?'is-active':'').'" href="'.esc_url(self::url(['page'=>$slug])).'"><strong>'.($index+1).'</strong><span><b>'.esc_html($title).'</b><br><small>'.(int)$counts[$index].' · '.esc_html($caption).'</small></span></a>';
@@ -103,15 +177,7 @@ final class Admin
     }
     private static function listing(): void
     {
-        echo '<p><a class="button button-primary" href="'.esc_url(self::url(['edit'=>'new'])).'">Добавить устройство</a> <a class="button" href="'.esc_url(self::url(['page'=>'s101-import'])).'">Импорт и экспорт Excel</a></p>';
-        echo '<table class="widefat striped"><thead><tr><th>Код</th><th>Устройство</th><th>Категория / бренд</th><th>Публикация</th><th>Порядок модели</th><th>Услуги</th><th>Просмотр</th><th>Действия</th></tr></thead><tbody>';
-        $counts=[]; foreach (Catalog::prices() as $price) { $counts[$price['device_code']]=($counts[$price['device_code']]??0)+1; }
-        foreach (Catalog::devices(true) as $code=>$d) {
-            echo '<tr><td>'.esc_html($code).'</td><td><a href="'.esc_url(self::url(['edit'=>$code])).'"><strong>'.esc_html($d['name']).'</strong></a></td><td>'.esc_html($d['category'].' / '.$d['brand']).'</td><td>'.esc_html($d['publication']).'</td><td>'.(int)$d['model_order'].'</td><td>'.($counts[$code]??0).'</td><td><a href="'.esc_url(home_url($d['path'])).'" target="_blank" rel="noopener">Открыть</a></td><td><div class="s101-actions"><a class="button button-small" href="'.esc_url(self::url(['edit'=>$code])).'">Изменить</a>';
-            self::form('delete_device',['revision'=>Catalog::revision(),'code'=>$code,'confirm_delete'=>'1']);
-            echo '<button class="button button-small s101-delete" type="submit" onclick="return confirm(\'Удалить устройство полностью вместе со всеми его услугами и ценами? Это действие нельзя отменить.\')">Удалить полностью</button></form></div></td></tr>';
-        }
-        echo '</tbody></table><p>На тестовой площадке черновики доступны для проверки. На основном сайте посетителям показываются только опубликованные устройства.</p>';
+        AdminUI::listing();
     }
     private static function terms(string $taxonomy): void
     {
@@ -121,8 +187,9 @@ final class Admin
         if ($editing && !$term instanceof \WP_Term) { throw new \RuntimeException('Элемент справочника не найден.'); }
         $data=$term instanceof \WP_Term ? ['term_id'=>$term->term_id,'name'=>$term->name,'slug'=>$term->slug] : [];
         foreach (['sort_order','home_enabled','home_image_id','catalog_title','catalog_subtitle','catalog_intro','info_title','info_text','info_items'] as $key) { $data[$key]=$term?get_term_meta($term->term_id,'s101_'.$key,true):''; }
+        if (isset(self::$draft['term']) && is_array(self::$draft['term'])) { $data=array_replace($data,self::$draft['term']); }
         echo '<p>Справочник управляет вариантами в карточке устройства и каталогом. Адрес создаётся один раз и не меняется после появления моделей.</p>';
-        echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand',['revision'=>Catalog::revision()]);
+        echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand',['revision'=>self::$draft['revision']??Catalog::revision()]);
         echo '<input type="hidden" name="term[term_id]" value="'.absint($data['term_id']??0).'">';
         self::field('term[name]','Название',$data['name']??''); self::field('term[slug]','Код адреса (латиницей, только при создании)',$data['slug']??'',[],(bool)$term);
         if ($is_category) {
@@ -134,23 +201,25 @@ final class Admin
             echo '<label for="s101-term-info-text">Текст блока «Важно знать»</label><textarea id="s101-term-info-text" name="term[info_text]" rows="3">'.esc_textarea($data['info_text']??'').'</textarea>';
             echo '<label for="s101-term-info-items">Пункты блока «Важно знать» — по одному на строку</label><textarea id="s101-term-info-items" name="term[info_items]" rows="4">'.esc_textarea($data['info_items']??'').'</textarea>';
         } else {
-            $selected=$term?Catalog::brand_categories($term,$brand_usage):[];
+            $selected=$data['category_slugs']??($term?Catalog::brand_categories($term,$brand_usage):[]);
             echo '<h3>Категории бренда и порядок в каждой категории</h3><p>Выберите одну или несколько категорий. Меньше число — выше бренд в списке. При одинаковом порядке сохраняется прежняя последовательность.</p><div class="s101-grid">';
             foreach (Catalog::terms('s101_category') as $category) {
                 echo '<div><label><input style="width:auto" type="checkbox" name="term[category_slugs][]" value="'.esc_attr($category->slug).'" '.checked(in_array($category->slug,$selected,true),true,false).'> '.esc_html($category->name).'</label>';
-                self::weight_field('term[category_orders]['.$category->slug.']','Порядок в категории «'.$category->name.'»',$term?Catalog::brand_order($term,$category->slug):1000);
+                self::weight_field('term[category_orders]['.$category->slug.']','Порядок в категории «'.$category->name.'»',$data['category_orders'][$category->slug]??($term?Catalog::brand_order($term,$category->slug):1000));
                 echo '</div>';
             }
             echo '</div><p>Категорию, в которой уже есть модели бренда, отключить нельзя: это сохраняет их связь и адреса.</p>';
         }
         submit_button($term?'Сохранить':'Создать '.$label); echo '</form></div>';
+        if ($term) { echo '<p><a class="button" href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands'])).'">Добавить '.($is_category?'ещё категорию':'ещё бренд').'</a></p>'; }
         echo '<h2>Существующие '.($is_category?'категории':'бренды').'</h2><p>«Модели» — все устройства, включая черновики и скрытые. Рядом показано, сколько из них опубликовано.</p><table class="widefat striped"><thead><tr><th>Название</th><th>Адрес</th><th>Модели</th><th>'.($is_category?'Порядок':'Категории · порядок').'</th><th></th></tr></thead><tbody>';
         $counts=Catalog::model_counts($taxonomy);
         foreach (Catalog::terms($taxonomy) as $item) {
             $count=$counts[$item->slug]??['total'=>0,'published'=>0]; $ordering=[];
             if ($is_category) { $ordering[]=(string)Catalog::category($item->slug)['sort_order']; }
             else { foreach (Catalog::brand_categories($item,$brand_usage) as $slug) { $category=Catalog::term_by_slug('s101_category',$slug); if ($category) { $ordering[]=$category->name.' · '.Catalog::brand_order($item,$slug); } } }
-            echo '<tr><td>'.esc_html($item->name).'</td><td><code>'.esc_html($item->slug).'</code></td><td><strong>'.$count['total'].'</strong><br><small>Опубликовано: '.$count['published'].'</small></td><td>'.esc_html(implode('; ',$ordering)).'</td><td><div class="s101-actions"><a class="button button-small" href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands','edit_term'=>$item->term_id])).'">Изменить</a>';
+            $browse=self::url([$is_category?'category':'brand'=>$item->slug]);
+            echo '<tr data-href="'.esc_url($browse).'"><td><a href="'.esc_url($browse).'"><strong>'.esc_html($item->name).'</strong></a></td><td><code>'.esc_html($item->slug).'</code></td><td><strong>'.$count['total'].'</strong><br><small>Опубликовано: '.$count['published'].'</small></td><td>'.esc_html(implode('; ',$ordering)).'</td><td><div class="s101-actions"><a class="button button-small" href="'.esc_url(self::url(['page'=>$is_category?'s101-categories':'s101-brands','edit_term'=>$item->term_id])).'">Изменить</a>';
             self::form($is_category?'delete_category':'delete_brand',['revision'=>Catalog::revision(),'term_id'=>$item->term_id,'confirm_delete'=>'1']);
             $warning=$count['total']?' Будут также удалены устройства: '.$count['total'].'.':'';
             $confirm='Удалить '.($is_category?'категорию':'бренд').' «'.$item->name.'» полностью?'.$warning.' Это действие нельзя отменить.';
@@ -169,10 +238,17 @@ final class Admin
     {
         $batch=Import::batch($id); $plan=$batch['plan'];
         $labels=['preview'=>'Предварительная проверка','applied'=>'Изменения применены','restored'=>'Пакет восстановлен'];
+        if ($batch['state']==='applied') { echo '<p data-catalog-applied role="status">Изменения применены к каталогу сайта.</p>'; }
         echo '<h2>'.esc_html($labels[$batch['state']]??$batch['state']).' · пакет №'.$id.'</h2><p>Новых: '.$plan['counts']['new'].' · изменённых: '.$plan['counts']['changed'].' · скрываемых: '.$plan['counts']['hidden'].' · удаляемых: '.($plan['counts']['deleted']??0).' · без изменений: '.$plan['counts']['same'].'</p>';
         foreach ($plan['errors'] as $error) { echo '<p class="s101-bad">'.esc_html($error).'</p>'; }
         foreach ($plan['warnings'] as $warning) { echo '<p class="notice notice-warning">'.esc_html($warning).'</p>'; }
         if ($batch['state']==='preview' && !$plan['errors']) { self::form('apply',['batch'=>$id]); submit_button('Применить проверенные изменения','primary','submit',false); echo '</form>'; }
+        if ($batch['state']==='preview' && !empty($plan['editor_draft'])) {
+            $device_change=reset($plan['devices']); $device_code=$device_change['before']['code']??'new';
+            $args=['edit'=>$device_code,'form_draft'=>$plan['editor_draft']];
+            foreach (['embedded','services_only'] as $key) { if (!empty($_GET[$key])) { $args[$key]='1'; } }
+            echo '<p><a class="button" href="'.esc_url(self::url($args)).'">Вернуться к редактированию с моими данными</a></p>';
+        }
         if ($batch['state']==='applied' && Catalog::revision()===(int)$batch['revision']+1) { self::form('restore',['batch'=>$id]); echo '<p>Восстановление вернёт весь каталог к состоянию перед этим пакетом.</p>'; submit_button('Восстановить состояние перед пакетом','secondary','submit',false); echo '</form>'; }
         echo '<div class="card"><h2>Устройства</h2><table class="widefat striped"><thead><tr><th>Строка</th><th>Код</th><th>Название</th><th>Публикация</th><th>Порядок: до → после</th><th>Адрес</th></tr></thead><tbody>';
         foreach ($plan['devices'] as $key=>$change) { $d=$change['after']; echo '<tr><td>'.$change['row'].'</td><td>'.esc_html($key).'</td><td>'.esc_html($d['name']).'</td><td>'.esc_html($d['publication']).'</td><td>'.esc_html(($change['before']['model_order']??'—').' → '.($d['model_order']??1000)).'</td><td>'.esc_html($d['path']).'</td></tr>'; }
@@ -202,8 +278,9 @@ final class Admin
     private static function field(string $name,string $label,mixed $value='',array $choices=[],bool $readonly=false): void
     {
         $id='s101-'.preg_replace('/[^a-z0-9]/i','-',$name); echo '<label for="'.esc_attr($id).'">'.esc_html($label).'</label>';
+        $required=in_array($name,['term[name]','device[name]'],true)?' required maxlength="'.($name==='term[name]'?'120':'240').'"':'';
         if ($choices) { echo '<select id="'.esc_attr($id).'" name="'.esc_attr($name).'">'; foreach ($choices as $choice) { echo '<option '.selected((string)$value,$choice,false).'>'.esc_html($choice).'</option>'; } echo '</select>'; }
-        else { echo '<input id="'.esc_attr($id).'" name="'.esc_attr($name).'" value="'.esc_attr((string)($value??'')).'" '.($readonly?'readonly':'').'>'; }
+        else { echo '<input autocomplete="off" id="'.esc_attr($id).'" name="'.esc_attr($name).'" value="'.esc_attr((string)($value??'')).'" '.$required.' '.($readonly?'readonly':'').'>'; }
     }
     private static function weight_field(string $name,string $label,mixed $value): void
     {
@@ -228,53 +305,28 @@ final class Admin
         $devices=Catalog::devices(true); $device=$devices[$code]??[];
         $brand_usage=Catalog::brand_usage($devices);
         if ($code!=='new' && !$device) { throw new \RuntimeException('Устройство не найдено.'); }
+        if (isset(self::$draft['device']) && is_array(self::$draft['device'])) { $device=array_replace($device,self::$draft['device']); }
+        if (!$device) { $device=['category_slug'=>sanitize_key($_GET['category']??''),'brand_slug'=>sanitize_key($_GET['brand']??'')]; }
         echo '<h2>'.esc_html($device['name']??'Новое устройство').'</h2>';
-        self::form('save',['revision'=>Catalog::revision()]);
-        echo '<div class="card"><div class="s101-grid">';
+        self::form('save',['revision'=>self::$draft['revision']??Catalog::revision(),'embedded'=>!empty($_GET['embedded'])?'1':'0']);
+        echo '<div class="card s101-device-fields"'.(!empty($_GET['services_only'])?' hidden':'').'><div class="s101-grid">';
         foreach (Workbook::DEVICE_KEYS as $i=>$key) {
             if (in_array($key,['category_slug','brand_slug'],true)) { continue; }
+            if (in_array($key,['code','path','model_slug','category_title'],true)) { echo '<input type="hidden" name="device['.$key.']" value="'.esc_attr($device[$key]??'').'">'; continue; }
             echo '<div>';
             if (in_array($key,['category','brand'],true)) { self::device_term_select($key,$device,$brand_usage); }
             elseif ($key==='model_order') { self::weight_field('device[model_order]','Порядок модели в категории',$device['model_order']??1000); }
-            else { self::field('device['.$key.']',Workbook::DEVICE_HEADERS[$i],$device[$key]??($key==='publication'?'Черновик':''),$key==='publication'?['Черновик','Опубликовать','Скрыть']:[],!empty($device)&&in_array($key,['code','path','model_slug'],true)); }
+            else { self::field('device['.$key.']',Workbook::DEVICE_HEADERS[$i],$device[$key]??($key==='publication'?'Черновик':''),$key==='publication'?['Черновик','Опубликовать','Скрыть']:[]); }
             echo '</div>';
         }
         echo '<script>(function(){const category=document.getElementById("s101-device-category"),brand=document.getElementById("s101-device-brand");function filter(){for(const option of brand.options){if(!option.value)continue;const available=JSON.parse(option.dataset.categories||"[]").includes(category.value);option.hidden=!available;option.disabled=!available;if(!available&&option.selected)brand.value="";}brand.options[0].textContent=category.value?"Выберите бренд этой категории":"Сначала выберите категорию";}category.addEventListener("change",filter);filter();})();</script>';
-        echo '</div><p>Фото: прямая HTTPS-ссылка. Служебные коды адреса новой модели можно оставить пустыми — они появятся в отчёте. Для очистки необязательного поля введите [очистить].</p></div><div class="card"><h2>Услуги и цены</h2><p>Введите сумму — тип цены автоматически станет «Фиксированная». Для «После диагностики» и «По запросу» сумма не хранится. Ненужную услугу удаляйте кнопкой в её строке.</p><div class="s101-scroll"><table class="widefat s101-prices"><thead><tr>';
-        $keys=array_values(array_diff(Workbook::PRICE_KEYS,['device_code','device_name']));
-        foreach ($keys as $key) { echo '<th>'.esc_html(Workbook::PRICE_HEADERS[array_search($key,Workbook::PRICE_KEYS,true)]).'</th>'; }
-        echo '<th>Удаление</th></tr></thead><tbody id="s101-price-rows">';
-        $rows=array_values(Catalog::prices($code)); $rows=array_merge($rows,[[],[],[]]);
-        foreach ($rows as $i=>$row) { self::price_row($i,$row,$keys); }
-        echo '</tbody></table></div><p><button class="button" type="button" id="s101-add-price">Добавить строку услуги</button></p><template id="s101-price-template">'; self::price_row('__ROW__',[],$keys); echo '</template>';
-        echo '<script>(function(){const body=document.getElementById("s101-price-rows"),template=document.getElementById("s101-price-template");document.getElementById("s101-add-price").addEventListener("click",function(){body.insertAdjacentHTML("beforeend",template.innerHTML.replaceAll("__ROW__",String(body.rows.length)));});body.addEventListener("input",function(event){const amount=event.target.closest("[data-price-amount]");if(!amount||amount.value.trim()==="")return;const row=amount.closest("tr"),type=row.querySelector("[data-price-type=\""+amount.dataset.priceAmount+"\"]");if(type&&["Бесплатно","По запросу","После диагностики"].includes(type.value))type.value="Фиксированная";});body.addEventListener("change",function(event){const type=event.target.closest("[data-price-type]");if(!type)return;const amount=type.closest("tr").querySelector("[data-price-amount=\""+type.dataset.priceType+"\"]");if(!amount)return;if(type.value==="Бесплатно")amount.value="0";else if(["По запросу","После диагностики"].includes(type.value))amount.value="";});body.addEventListener("click",function(event){const button=event.target.closest(".s101-remove-service");if(!button)return;const row=button.closest("tr"),flag=row.querySelector("[data-delete-flag]"),deleting=flag.value!=="1";flag.value=deleting?"1":"0";row.classList.toggle("s101-row-deleted",deleting);button.textContent=deleting?"Вернуть":"Удалить строку";button.setAttribute("aria-pressed",deleting?"true":"false");});})();</script>';
+        echo '</div><p>Коды и адрес новой модели создаются автоматически. Фото: прямая HTTPS-ссылка. Пустое необязательное поле очищает прежнее значение.</p></div><div class="card" id="s101-services"><h2>Услуги и цены</h2><p>Цена с деталью — полная сумма для клиента. Введите 0 для нулевой цены. Коды услуг создаются автоматически.</p>';
+        AdminUI::services(self::$draft['prices']??array_values(Catalog::prices($code)));
         if (!$device || !Catalog::prices($code)) {
             echo '<label for="s101-copy">Скопировать набор работ с устройства</label><select name="copy_from" id="s101-copy"><option value="">Не копировать</option>';
-            foreach ($devices as $other_code=>$other) { echo '<option value="'.esc_attr($other_code).'">'.esc_html($other['name']).'</option>'; }
+            foreach ($devices as $other_code=>$other) { echo '<option value="'.esc_attr($other_code).'" '.selected((string)(self::$draft['copy_from']??''),$other_code,false).'>'.esc_html($other['name']).'</option>'; }
             echo '</select><p>При копировании оставьте таблицу выше пустой; затем отредактируйте отличия в скопированных работах.</p>';
         }
-        echo '</div>'; submit_button('Проверить изменения перед сохранением'); echo '</form>';
-    }
-    private static function price_row(int|string $i,array $row,array $keys): void
-    {
-        echo '<tr>';
-        $choices=['work_type'=>['Фиксированная','От','Бесплатно','По запросу'],'total_type'=>['Фиксированная','Ориентир','От','Бесплатно','После диагностики'],'action'=>['Обновить','Скрыть']];
-        foreach ($keys as $key) {
-            echo '<td>';
-            if (in_array($key,['work_amount','total_amount'],true)) {
-                $part=str_starts_with($key,'work_')?'work':'total';
-                echo '<input type="number" min="0" step="0.01" inputmode="decimal" data-price-amount="'.$part.'" name="prices['.esc_attr((string)$i).']['.$key.']" value="'.esc_attr((string)($row[$key]??'')).'">';
-            } elseif (isset($choices[$key])) {
-                $attribute='';
-                if (in_array($key,['work_type','total_type'],true)) { $attribute=' data-price-type="'.(str_starts_with($key,'work_')?'work':'total').'"'; }
-                echo '<select'.$attribute.' name="prices['.esc_attr((string)$i).']['.$key.']">';
-                foreach ($choices[$key] as $choice) { echo '<option '.selected((string)($row[$key]??''),$choice,false).'>'.esc_html($choice).'</option>'; }
-                echo '</select>';
-            } else {
-                self::field('prices['.$i.']['.$key.']','',$row[$key]??'',[], $key==='service_code'&&!empty($row));
-            }
-            echo '</td>';
-        }
-        echo '<td><input type="hidden" data-delete-flag name="prices['.esc_attr((string)$i).'][_delete]" value="0"><button class="button button-small s101-remove-service" type="button" aria-pressed="false"'.(empty($row)?' disabled':'').'>Удалить строку</button></td></tr>';
+        echo '</div><input type="hidden" name="_s101_complete" value="1">'; submit_button('Проверить изменения перед сохранением'); echo '</form>';
     }
 }
