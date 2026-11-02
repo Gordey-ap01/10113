@@ -1,0 +1,3 @@
+# Gordey_ap01: retain the hosting snapshot bytes, including original CRLF.
+index.html -text diff whitespace=cr-at-eol
+tools/local-recovery/*.sh text eol=lf
