@@ -1,0 +1,80 @@
+# Gordey_ap01. Uses the already installed, inspected PHP 8.3 Docker image.
+# https://github.com/docker-library/docs/blob/master/wordpress/README.md
+services:
+  database:
+    image: mysql:8.0
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: service101_recovered
+      MYSQL_USER: service101_recovered
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$${MYSQL_ROOT_PASSWORD}" mysqladmin ping -h 127.0.0.1 --silent']
+      interval: 3s
+      timeout: 3s
+      start_period: 300s
+      retries: 40
+    networks: [recovery]
+
+  static:
+    image: wordpress:latest
+    pull_policy: never
+    restart: unless-stopped
+    entrypoint: [/bin/sh, -c]
+    command: ['a2enmod headers substitute >/dev/null && exec apache2-foreground']
+    ports: ['127.0.0.1:8184:80']
+    volumes:
+      - ${RECOVERY_RUNTIME}/static:/var/www/html
+      - ${RECOVERY_RUNTIME}/mail:/var/recovery-mail
+      - ./apache-local.conf:/etc/apache2/conf-enabled/recovery.conf:ro
+      - ./local.ini:/usr/local/etc/php/conf.d/recovery.ini:ro
+      - ./capture-mail.sh:/opt/recovery/capture-mail.sh:ro
+    networks: [frontend]
+
+  wordpress:
+    image: wordpress:latest
+    pull_policy: never
+    restart: unless-stopped
+    entrypoint: [/bin/sh, -c]
+    command: ['a2enmod headers substitute >/dev/null && exec apache2-foreground']
+    depends_on:
+      database: {condition: service_healthy}
+    environment: &wordpress_environment
+      WORDPRESS_DB_HOST: database:3306
+      WORDPRESS_DB_NAME: service101_recovered
+      WORDPRESS_DB_USER: service101_recovered
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      LOCAL_ADMIN_PASSWORD: ${LOCAL_ADMIN_PASSWORD}
+    ports: ['127.0.0.1:8185:80']
+    volumes:
+      - ${RECOVERY_RUNTIME}/wordpress:/var/www/html
+      - ${RECOVERY_RUNTIME}/mail:/var/recovery-mail
+      - ./apache-local.conf:/etc/apache2/conf-enabled/recovery.conf:ro
+      - ./local.ini:/usr/local/etc/php/conf.d/recovery.ini:ro
+      - ./capture-mail.sh:/opt/recovery/capture-mail.sh:ro
+    networks: [frontend, recovery]
+
+  cli:
+    image: wordpress:cli
+    pull_policy: never
+    profiles: [tools]
+    user: '0:0'
+    environment: *wordpress_environment
+    volumes:
+      - ${RECOVERY_RUNTIME}/wordpress:/var/www/html
+      - ${RECOVERY_RUNTIME}/mail:/var/recovery-mail
+      - ./initialize-local.php:/opt/recovery/initialize-local.php:ro
+      - ./inspect-local.php:/opt/recovery/inspect-local.php:ro
+    entrypoint: [wp, --allow-root, --path=/var/www/html]
+    networks: [recovery]
+
+volumes:
+  database:
+networks:
+  frontend:
+  recovery:
+    internal: true
