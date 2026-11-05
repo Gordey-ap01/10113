@@ -3,7 +3,7 @@ use Service101\Catalog;
 use Service101\Routes;
 $device=Routes::$device;
 if (!$device) { status_header(404); get_template_part('index'); return; }
-$copy=s101_copy(); $category=Catalog::category($device['category_slug']);
+$copy=s101_copy(); $category=Catalog::category($device['category_slug']); $brand_presentation=Catalog::brand_presentation($device['brand_slug']);
 $info=['title'=>$category['info_title'],'text'=>$category['info_text'],'items'=>$category['info_items']];
 $devices=Catalog::devices(Routes::can_preview()); $prices=array_values(Catalog::prices($device['code'],false));
 $categories=Catalog::categories(Routes::can_preview()); $brands=Catalog::brands_for_category($device['category_slug'],Routes::can_preview(),$devices); $models=[];
@@ -42,9 +42,9 @@ get_header();
   <article class="device-card"><div class="device-card__media">
     <?php if ($image): ?><img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($title); ?>" loading="eager"><?php else: ?><div class="device-card__placeholder" aria-hidden="true"></div><?php endif; ?>
   </div><div class="device-card__body"><p class="device-kicker"><?php echo esc_html($category['title']); ?></p><h1 class="device-title"><?php echo esc_html(Routes::$onsite?'Выездной ремонт: '.$title:$title); ?></h1>
-  <p class="device-description"><?php echo esc_html(Routes::$onsite?'Мастер приедет домой, в офис или на производство. Возможен ремонт на месте или доставка устройства в сервис после диагностики.':($device['description']?:$category['intro'])); ?></p>
-  <div class="device-facts"><span><strong>от 30 мин</strong> типовой ремонт</span><span><strong>до 12 мес</strong> гарантия</span></div></div></article>
-  <div class="prices-column"><article class="prices-panel"><div class="prices-panel__head"><div><p class="eyebrow">Цена работы без детали</p><p><?php echo esc_html($category['subtitle']); ?></p></div><span class="warranty-pill">Гарантия до 12 мес</span></div>
+  <p class="device-description"><?php echo esc_html($brand_presentation['catalog_intro']); ?></p>
+  <div class="device-facts"><span><strong><?php echo esc_html($brand_presentation['repair_time']); ?></strong> типовой ремонт</span><span><strong><?php echo esc_html($brand_presentation['warranty']); ?></strong> гарантия</span></div></div></article>
+  <div class="prices-column"><article class="prices-panel"><div class="prices-panel__head"><div><p class="eyebrow">Цена работы без детали</p><p><?php echo esc_html($category['subtitle']); ?></p></div><span class="warranty-pill">Гарантия <?php echo esc_html($brand_presentation['warranty']); ?></span></div>
     <div class="price-list"><div class="price-list__head" aria-hidden="true"><span>Работа и срок</span><span>Средняя цена с деталью</span><span></span></div>
     <?php foreach ($prices as $index=>$price): if ($index===7): ?><div class="extra-services" hidden><?php endif; ?>
       <div class="price-row" data-service-id="<?php echo esc_attr($price['device_code'].'|'.$price['service_code']); ?>"><div class="price-row__name"><div class="price-row__title"><?php echo esc_html($price['name']); ?> <?php if ($price['badge']): ?><span class="badge"><?php echo esc_html($price['badge']); ?></span><?php endif; ?></div><div class="price-row__time"><?php echo esc_html($price['time']?:'по согласованию'); ?></div><div class="price-row__desc"><?php echo esc_html($price['description']); ?></div></div>

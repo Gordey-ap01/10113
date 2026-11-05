@@ -186,7 +186,7 @@ final class Admin
         $editing=absint($_GET['edit_term']??0); $term=$editing?get_term($editing,$taxonomy):null;
         if ($editing && !$term instanceof \WP_Term) { throw new \RuntimeException('Элемент справочника не найден.'); }
         $data=$term instanceof \WP_Term ? ['term_id'=>$term->term_id,'name'=>$term->name,'slug'=>$term->slug] : [];
-        foreach (['sort_order','home_enabled','home_image_id','catalog_title','catalog_subtitle','catalog_intro','info_title','info_text','info_items'] as $key) { $data[$key]=$term?get_term_meta($term->term_id,'s101_'.$key,true):''; }
+        foreach (['sort_order','home_enabled','home_image_id','catalog_title','catalog_subtitle','catalog_intro','repair_time','warranty','info_title','info_text','info_items'] as $key) { $data[$key]=$term?get_term_meta($term->term_id,'s101_'.$key,true):''; }
         if (isset(self::$draft['term']) && is_array(self::$draft['term'])) { $data=array_replace($data,self::$draft['term']); }
         echo '<p>Справочник управляет вариантами в карточке устройства и каталогом. Адрес создаётся один раз и не меняется после появления моделей.</p>';
         echo '<div class="card"><h2>'.($term?'Изменить':'Новый').' '.$label.'</h2>'; self::form($is_category?'save_category':'save_brand',['revision'=>self::$draft['revision']??Catalog::revision()]);
@@ -196,11 +196,15 @@ final class Admin
             self::weight_field('term[sort_order]','Порядок категории',$data['sort_order']!==''?$data['sort_order']:1000);
             echo '<p><label><input style="width:auto" type="checkbox" name="term[home_enabled]" value="1" '.checked($data['home_enabled']??'', '1',false).'> Показывать карточку категории на главной</label></p>';
             self::field('term[catalog_title]','Заголовок в каталоге',$data['catalog_title']??''); self::field('term[catalog_subtitle]','Подзаголовок цен',$data['catalog_subtitle']??'');
-            echo '<label for="s101-term-catalog-intro">Короткое описание</label><textarea id="s101-term-catalog-intro" name="term[catalog_intro]" rows="3">'.esc_textarea($data['catalog_intro']??'').'</textarea>';
             self::field('term[info_title]','Заголовок блока «Важно знать»',$data['info_title']??'');
             echo '<label for="s101-term-info-text">Текст блока «Важно знать»</label><textarea id="s101-term-info-text" name="term[info_text]" rows="3">'.esc_textarea($data['info_text']??'').'</textarea>';
             echo '<label for="s101-term-info-items">Пункты блока «Важно знать» — по одному на строку</label><textarea id="s101-term-info-items" name="term[info_items]" rows="4">'.esc_textarea($data['info_items']??'').'</textarea>';
         } else {
+            echo '<h3>Текст и условия ремонта бренда</h3><p>Эти значения показываются у всех моделей этого бренда во всех его категориях.</p>';
+            echo '<label for="s101-term-catalog-intro">Короткое описание</label><textarea id="s101-term-catalog-intro" name="term[catalog_intro]" rows="3">'.esc_textarea($data['catalog_intro']??'').'</textarea>';
+            self::field('term[repair_time]','Типовой ремонт — срок, например «от 30 мин»',$data['repair_time']??'');
+            self::field('term[warranty]','Гарантия — срок, например «до 12 мес»',$data['warranty']??'');
+            echo '<p class="description">Если оставить поля пустыми: «Диагностика и согласование стоимости до начала ремонта.», «от 30 мин» и «до 12 мес».</p>';
             $selected=$data['category_slugs']??($term?Catalog::brand_categories($term,$brand_usage):[]);
             echo '<h3>Категории бренда и порядок в каждой категории</h3><p>Выберите одну или несколько категорий. Меньше число — выше бренд в списке. При одинаковом порядке сохраняется прежняя последовательность.</p><div class="s101-grid">';
             foreach (Catalog::terms('s101_category') as $category) {

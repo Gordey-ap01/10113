@@ -91,8 +91,13 @@ final class Catalog
         if (is_wp_error($saved)) { throw new \RuntimeException($saved->get_error_message()); }
         $term=get_term((int)$saved['term_id'],$taxonomy);
         if (!$term instanceof \WP_Term) { throw new \RuntimeException('Не удалось сохранить справочник.'); }
-        foreach (['sort_order'=>'absint','home_enabled'=>static fn($v)=>$v==='1'?'1':'0','home_image_id'=>'absint','catalog_title'=>'sanitize_text_field','catalog_subtitle'=>'sanitize_text_field','catalog_intro'=>'sanitize_textarea_field','info_title'=>'sanitize_text_field','info_text'=>'sanitize_textarea_field','info_items'=>'sanitize_textarea_field'] as $key=>$sanitize) {
-            if (array_key_exists($key,$input)) { update_term_meta($term->term_id,'s101_'.$key,$sanitize($input[$key])); }
+        $fields=$taxonomy==='s101_brand'
+            ? ['catalog_intro'=>'sanitize_textarea_field','repair_time'=>'sanitize_text_field','warranty'=>'sanitize_text_field']
+            : ['sort_order'=>'absint','home_enabled'=>static fn($v)=>$v==='1'?'1':'0','home_image_id'=>'absint','catalog_title'=>'sanitize_text_field','catalog_subtitle'=>'sanitize_text_field','info_title'=>'sanitize_text_field','info_text'=>'sanitize_textarea_field','info_items'=>'sanitize_textarea_field'];
+        foreach ($fields as $key=>$sanitize) {
+            if (!array_key_exists($key,$input)) { continue; }
+            if (!is_scalar($input[$key])) { throw new \InvalidArgumentException('Некорректное значение поля справочника.'); }
+            update_term_meta($term->term_id,'s101_'.$key,$sanitize($input[$key]));
         }
         if ($taxonomy==='s101_brand') {
             update_term_meta($term->term_id,'s101_category_slugs',$categories);
@@ -124,6 +129,19 @@ final class Catalog
         $saved=get_term_meta($brand->term_id,'s101_category_slugs',true);
         $usage??=self::brand_usage();
         return array_values(array_unique(array_merge(is_array($saved)?$saved:[],$usage[$brand->slug]??[])));
+    }
+
+    /** Brand copy is shared by every model and category of this brand. */
+    public static function brand_presentation(string $slug): array
+    {
+        $defaults=['catalog_intro'=>'Диагностика и согласование стоимости до начала ремонта.','repair_time'=>'от 30 мин','warranty'=>'до 12 мес'];
+        $term=self::term_by_slug('s101_brand',$slug);
+        if (!$term) { return $defaults; }
+        foreach ($defaults as $key=>$default) {
+            $value=get_term_meta($term->term_id,'s101_'.$key,true);
+            if (is_string($value) && trim($value)!=='') { $defaults[$key]=$value; }
+        }
+        return $defaults;
     }
 
     public static function brand_order(\WP_Term $brand,string $category_slug): int

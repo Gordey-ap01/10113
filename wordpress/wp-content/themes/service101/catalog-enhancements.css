@@ -1,3 +1,12 @@
+.s101-site-credit {
+  margin: 0;
+  padding: 16px 24px;
+  color: #526173;
+  background: #f6fafd;
+  font-size: 12px;
+  text-align: center;
+}
+
 .catalog-help {
   align-self: stretch;
   display: flex;
