@@ -65,7 +65,9 @@ final class Http implements HttpTransport
                     $location = '';
                     foreach ($headers as $line) if (stripos($line, 'Location:') === 0) $location = trim(substr($line, 9));
                     if (str_starts_with($location, '/')) $location = 'https://' . $host . $location;
-                    if ($location !== '' && self::allowed($location) && $location !== $url) { $url = self::normalise($location); continue; }
+                    // The anonymous cookie check can redirect to the same URL
+                    // after changing a cookie. The bounded loop prevents cycles.
+                    if ($location !== '' && self::allowed($location)) { $url = self::normalise($location); continue; }
                 }
                 if ($status !== 200) throw new \RuntimeException('Источник вернул HTTP ' . $status);
                 if (str_contains($body, 'function get_jhash')) {

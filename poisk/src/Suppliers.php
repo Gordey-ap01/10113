@@ -33,8 +33,8 @@ final class Suppliers
         $item['part'] = preg_match('/диспле|экран/u', $n) ? 'display' : (preg_match('/аккумулятор|батарея|\bакб\b/u', $n) ? 'battery' : (preg_match('/нижн.*(?:плат|шлейф)|шлейф.*(?:заряд|системн)|плат.*(?:заряд|разъем|разъём)/u', $n) ? 'charging' : (preg_match('/задн.*крыш/u', $n) ? 'back' : 'other')));
         if (preg_match('/^(?:наклейк|защитн|стекло|пл[её]нк|клей\b|скотч|рамк|уплотн|сетк|пылезащит|коннектор|разъ[её]м|шлейф.{0,25}(?:диспле|экран|аккумулятор))/u', $n)) $item['part'] = 'other';
         $item['technology'] = preg_match('/amoled/iu', $n) ? 'AMOLED' : (str_contains($n, 'oled') ? 'OLED' : (preg_match('/tft|ips|in.cell|incell/iu', $n) ? 'TFT / IPS' : (str_contains($n, 'lcd') ? 'LCD' : null)));
-        $item['origin'] = preg_match('/copy|копия|аналог/iu', $n) ? 'copy' : (preg_match('/оригинал|\bor\b|or100|or new|подлинн/iu', $n) ? 'original_claimed' : 'unknown');
-        $item['condition'] = preg_match('~снят|разбор|б.у~u', $n) ? 'pulled' : (preg_match('/восстанов|\bref\b|refurb/iu', $n) ? 'restored' : (preg_match('/новый|\bnew\b/iu', $n) ? 'new' : 'unknown'));
+        $item['origin'] = preg_match('/copy|копия|аналог|не\s?ориг/iu', $n) ? 'copy' : (preg_match('/ориг|\bor\b|or100|or new|подлинн/iu', $n) ? 'original_claimed' : 'unknown');
+        $item['condition'] = preg_match('/восстанов|\bref\b|refurb|заменен.{0,12}стекло/iu', $n) ? 'restored' : (preg_match('~снят|разбор|б[./]у~u', $n) ? 'pulled' : (preg_match('/новый|\bnew\b/iu', $n) ? 'new' : 'unknown'));
         $item['stock'] ??= 'unknown'; $item['warehouse'] ??= null;
         $item['delivery'] ??= null; $item['delivery_cost'] ??= null;
         $item['quantity'] = null;
@@ -69,7 +69,7 @@ final class Suppliers
         $result = $this->$method($q, $page);
         $out = [];
         foreach ($result['items'] as $item) {
-            if (!self::matches($query, $item['name'])) continue;
+            if (!self::matches($query, $item['name']) && !self::matches($query, $item['sku'] ?? '')) continue;
             $item = self::enrich($item);
             if ($part !== 'all' && $item['part'] !== $part) continue;
             $item['supplier'] = $source;
@@ -127,8 +127,8 @@ final class Suppliers
             $discount = self::prices(self::text($xp, './/*[' . self::cls('product-grid__discount_price') . ']', $card));
             preg_match('/Артикул:\s*([A-Za-z0-9_\-]+)/u', $txt, $sku);
             $arrival = self::text($xp, './/*[' . self::cls('product-grid_will-arrive') . ']', $card);
-            $available = self::text($xp, './/*[' . self::cls('product-grid_avail') . ']/parent::*[not(contains(@style,"display: none"))]', $card);
-            $unavailable = self::text($xp, './/*[' . self::cls('product-grid_not-avail') . ' and not(contains(@style,"display: none"))]', $card);
+            $available = self::text($xp, './/*[' . self::cls('product-grid_avail') . ']/parent::*[not(contains(translate(@style," ",""),"display:none"))]', $card);
+            $unavailable = self::text($xp, './/*[' . self::cls('product-grid_not-avail') . ' and not(contains(translate(@style," ",""),"display:none"))]', $card);
             $stock = $available !== '' ? 'in' : ($arrival !== '' ? 'order' : ($unavailable !== '' ? 'out' : 'unknown'));
             $items[] = ['name' => $name, 'url' => $link, 'sku' => $sku[1] ?? '', 'price' => $prices[0] ?? null, 'other_prices' => $discount,
                 'price_type' => 'Цена на сайте', 'warehouse' => 'Хабаровск', 'stock' => $stock, 'stock_details' => $arrival !== '' ? $arrival : ($stock === 'in' ? 'В наличии' : ($unavailable ?: 'Уточнить'))];

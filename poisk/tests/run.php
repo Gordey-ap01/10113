@@ -16,6 +16,8 @@ check(!Suppliers::matches('iPhone 12 Pro','Дисплей для iPhone 12 Pro M
 check(Suppliers::matches('iPhone 12 Pro','Дисплей для iPhone 12/12 Pro'),'combined model includes Pro');
 check(Suppliers::enrich(['name'=>'Наклейка на дисплей iPhone 12'])['part']==='other','display adhesive is not a display repair');
 check(Suppliers::enrich(['name'=>'Шлейф аккумулятора iPhone 12'])['part']==='other','battery flex is not a battery repair');
+check(Suppliers::enrich(['name'=>'Аккумулятор неоригинальный'])['origin']==='copy','non-original does not become original');
+check(Suppliers::enrich(['name'=>'Дисплей снятый, заменено только стекло'])['condition']==='restored','glass replacement is restored even when pulled');
 $e=Suppliers::enrich(['name'=>'Дисплей iPhone 12 copy OLED REF','url'=>'https://taggsm.ru/','price'=>100]);
 check($e['technology']==='OLED'&&$e['origin']==='copy'&&$e['condition']==='restored','independent quality fields');
 check($e['quantity']===null&&$e['delivery_cost']===null,'unknown quantity and delivery stay unknown');
@@ -34,4 +36,7 @@ foreach (['taggsm'=>'iPhone 12 mini','moba'=>'iPhone 12','dvsota'=>'Диспле
     if($source==='moba')check(str_starts_with($result['items'][0]['name'],'Дисплей'),'MOBA hidden template tag is excluded');
     if($source==='greenspark')check($result['items'][0]['stock']==='out'&&$result['items'][1]['stock']==='in','Nuxt references preserve stock per product');
 }
+$fixture->source='moba';$result=$sources->search('moba','LCD-PMI120-CP-B-HOD','display');
+check(count($result['items'])===1,'article search matches supplier SKU');
+check(Labor::price($result['items'][0]['name'],'display',$result['items'][0]['technology'])===5000,'article result uses actual iPhone repair rate');
 echo "PASS: $checks checks\n";

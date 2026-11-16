@@ -24,9 +24,11 @@ function run(string $root, string $release, array $config): void
     }
     header('Cache-Control: no-store');
     if ($path === '/health') jsonResponse(['ok' => true, 'service' => 'poisk', 'author' => 'Gordey_ap01', 'release' => basename($release)]);
-    if (empty($config['local']) && empty($_SERVER['HTTPS']) && ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https') {
+    $secure = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    if (empty($config['local']) && !$secure) {
         header('Location: ' . $config['origin'] . '/', true, 308); return;
     }
+    if (empty($config['local']) && $secure) header('Strict-Transport-Security: max-age=31536000');
     $state = new State($root, $config);
     session_save_path($root . '/var/sessions');
     session_name(empty($config['local']) ? '__Host-poisk' : 'POISK_LOCAL');
@@ -61,7 +63,8 @@ function run(string $root, string $release, array $config): void
     if ($path === '/api/account' && $method === 'POST') {
         $input = json_decode(file_get_contents('php://input'), true) ?: [];
         $new = $input['password'] ?? ''; $old = $input['current'] ?? '';
-        if (!is_string($new) || !is_string($old) || strlen($new) < 12 || strlen($new) > 128) jsonResponse(['error' => 'Новый пароль должен содержать 12–128 символов'], 422);
+        if (!is_string($new) || !is_string($old) || mb_strlen($new) < 12) jsonResponse(['error' => 'Новый пароль должен содержать не менее 12 символов'], 422);
+        if (strlen($new) > 72) jsonResponse(['error' => 'Пароль слишком длинный. Выберите более короткий.'], 422);
         $s = $state->db->prepare('SELECT hash FROM users WHERE id=?'); $s->execute([$user['id']]);
         if (!password_verify($old, $s->fetchColumn())) jsonResponse(['error' => 'Текущий пароль неверен'], 422);
         $s = $state->db->prepare('UPDATE users SET hash=? WHERE id=?'); $s->execute([password_hash($new, PASSWORD_DEFAULT, ['cost' => 12]), $user['id']]);
@@ -82,7 +85,7 @@ function run(string $root, string $release, array $config): void
         try {
             $start = microtime(true); $sources = new Suppliers(new Http($root . '/var/http'));
             $data = $sources->search($source, $query, $part, $page);
-            foreach ($data['items'] as &$item) $item['labor'] = Labor::price($query, $item['part'], $item['technology']);
+            foreach ($data['items'] as &$item) $item['labor'] = Labor::price($item['name'], $item['part'], $item['technology']);
             unset($item);
             $data += ['supplier' => $source, 'checked_at' => gmdate('c'), 'duration_ms' => (int) round((microtime(true) - $start) * 1000), 'status' => 'ok'];
             $s = $state->db->prepare('INSERT INTO cache(k,ts,value) VALUES(?,?,?) ON CONFLICT(k) DO UPDATE SET ts=excluded.ts,value=excluded.value');

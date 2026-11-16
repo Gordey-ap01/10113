@@ -51,7 +51,7 @@ function reply(array $value, int $status): never
 function handle(string $root): never
 {
     if (realpath($root) !== ROOT || ($_SERVER['HTTP_HOST'] ?? '') !== HOST || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'
-        || (empty($_SERVER['HTTPS']) && ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https')) reply(['error' => 'Unavailable'], 404);
+        || ((empty($_SERVER['HTTPS']) || strtolower((string) $_SERVER['HTTPS']) === 'off') && ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') !== 'https')) reply(['error' => 'Unavailable'], 404);
     $config = require $root . '/config.php';
     if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 2000000) reply(['error' => 'Too large'], 413);
     $body = file_get_contents('php://input', false, null, 0, 2000001);
