@@ -94,4 +94,3 @@ final class Http implements HttpTransport
         return $out;
     }
 }
-

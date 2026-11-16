@@ -6,4 +6,3 @@
 - Preserve exact author signature `Gordey_ap01`.
 - Code deployment is from branch `feature/poisk-service101` through its dedicated workflow.
 - Never modify root-domain SSL, DNS, PHP configuration, or either existing site's files/database.
-

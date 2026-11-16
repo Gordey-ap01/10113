@@ -33,4 +33,3 @@ final class State
         file_put_contents($this->root . '/var/errors.log', gmdate('c') . ' ' . get_class($e) . ': ' . mb_substr($e->getMessage(), 0, 350) . "\n", FILE_APPEND | LOCK_EX);
     }
 }
-

@@ -7,4 +7,3 @@ RewriteRule ^ index.php [L]
 <FilesMatch "\.(?:sqlite|json|log|zip|tar|gz|bak|ini)$">
 Require all denied
 </FilesMatch>
-

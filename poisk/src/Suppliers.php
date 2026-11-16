@@ -176,4 +176,3 @@ final class Suppliers
         return ['items' => $items, 'context' => 'У GreenSpark цена зависит от выбранного магазина. Здесь указан магазин, фактически вернувшийся в ответе сайта; он может находиться в другом городе.', 'source_url' => $url, 'next_page' => self::nextPage($xp, $page)];
     }
 }
-

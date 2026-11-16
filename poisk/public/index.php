@@ -13,4 +13,3 @@ $release = $root . '/releases/' . $id;
 require $release . '/src/Web.php';
 try { \Poisk\run($root, $release, $config); }
 catch (Throwable $e) { http_response_code(500); header('Content-Type: text/plain; charset=utf-8'); echo 'Сервис временно недоступен. Повторите позже.'; }
-
