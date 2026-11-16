@@ -1,0 +1,29 @@
+name: Poisk — isolated deployment
+on:
+  push:
+    branches: [feature/poisk-service101]
+    paths: [poisk/**, .github/workflows/poisk.yml]
+permissions:
+  contents: read
+concurrency:
+  group: poisk-deploy
+  cancel-in-progress: false
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify PHP 8.3 and JavaScript
+        run: |
+          php8.3 -v
+          find poisk -name '*.php' -not -path '*/var/*' -not -path '*/.local/*' -print0 | xargs -0 -n1 php8.3 -l
+          php8.3 poisk/tests/run.php
+          php8.3 poisk/tests/deploy.php
+          node --check poisk/assets/app.js
+      - name: Package only poisk application files
+        run: python3 poisk/ops/package.py --release "$GITHUB_SHA" --output poisk/build/release.zip
+      - name: Publish to poisk only
+        if: vars.POISK_DEPLOY_ENABLED == 'true'
+        env:
+          POISK_DEPLOY_KEY: ${{ secrets.POISK_DEPLOY_KEY }}
+        run: python3 poisk/ops/publish.py poisk/build/release.zip "$GITHUB_SHA"
