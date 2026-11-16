@@ -1,12 +1,10 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../src/Http.php';
-require __DIR__ . '/../src/Labor.php';
 require __DIR__ . '/../src/Suppliers.php';
-use Poisk\Http; use Poisk\Labor; use Poisk\Suppliers;
+use Poisk\Http; use Poisk\Suppliers;
 $checks = 0;
 function check(bool $pass, string $label): void { global $checks; $checks++; if (!$pass) { fwrite(STDERR,"FAIL: $label\n"); exit(1); } }
-foreach ([['iPhone 11','display','OLED',4000],['iPhone 12','display','TFT / IPS',5000],['iPhone 11','charging',null,3000],['iPhone 12','charging',null,4000],['iPhone 16','back',null,10000],['iPhone 17','back',null,null],['iPhone SE','display','LCD',null],['Samsung A54','display','AMOLED',4000],['Redmi Note 12','display','TFT / IPS',2500],['Pixel','display',null,null],['iPhone 16','battery',null,4000],['Pixel','battery',null,2000],['Pixel','back',null,null]] as [$model,$part,$tech,$expected]) check(Labor::price($model,$part,$tech)===$expected,"labor: $model $part");
 foreach (['https://taggsm.ru/a','https://khabarovsk.moba.ru/catalog/','https://parts.dvsota.ru/catalog/'] as $u) check(Http::allowed($u),'allowed supplier');
 foreach (['http://taggsm.ru/a','https://taggsm.ru.evil.test/','https://user@taggsm.ru/','https://127.0.0.1/','file:///etc/passwd','https://taggsm.ru:443/'] as $u) check(!Http::allowed($u),'SSRF denied');
 check(Suppliers::matches('iPhone 12','Дисплей для iPhone 12/12 Pro + тачскрин'),'compatible combined model');
@@ -41,5 +39,4 @@ $fixture->source='moba';$result=$sources->search('moba','LCD-PMI120-CP-B-HOD','d
 check(count($result['items'])===1,'article search matches supplier SKU');
 parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$params);
 check($params['q']==='LCD-PMI120-CP-B-HOD','article lookup does not append model search keywords');
-check(Labor::price($result['items'][0]['name'],'display',$result['items'][0]['technology'])===5000,'article result uses actual iPhone repair rate');
 echo "PASS: $checks checks\n";

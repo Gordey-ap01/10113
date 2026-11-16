@@ -24,7 +24,7 @@ function archive(string $temp, string $release, ?string $unsafe = null, bool $co
 }
 function rejected(string $temp, string $release): bool { try { unpack($temp,$release);return false; } catch(Throwable) { return true; } }
 try {
-    archive($temp,$release); verify(count(unpack($temp,$release))===7,'valid isolated package accepted');
+    archive($temp,$release); verify(count(unpack($temp,$release))===6,'valid isolated package accepted');
     verify(rejected($temp,str_repeat('c',40)),'archive commit mismatch rejected');
     archive($temp,$release,null,true);verify(rejected($temp,$release),'tampered file checksum rejected');
     foreach(['../config.php','public/index.php','../../101service.ru/public_html/index.html','var/poisk.sqlite'] as $name){archive($temp,$release,$name);verify(rejected($temp,$release),'extra sensitive path rejected: '.$name);}

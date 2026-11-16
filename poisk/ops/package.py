@@ -6,7 +6,7 @@ import re
 import zipfile
 from pathlib import Path
 
-FILES = ['src/Http.php', 'src/Labor.php', 'src/State.php', 'src/Suppliers.php', 'src/Web.php', 'assets/app.js', 'assets/style.css']
+FILES = ['src/Http.php', 'src/State.php', 'src/Suppliers.php', 'src/Web.php', 'assets/app.js', 'assets/style.css']
 
 def build(root, output, release):
     if not re.fullmatch(r'[0-9a-f]{40}', release):

@@ -7,14 +7,12 @@
   const tech = document.getElementById('filter-tech'), source = document.getElementById('filter-source');
   const origin = document.getElementById('filter-origin'), condition = document.getElementById('filter-condition');
   const maxPrice = document.getElementById('filter-price'), stock = document.getElementById('filter-stock');
-  const local = document.getElementById('filter-local'), include = document.getElementById('include-labor');
+  const local = document.getElementById('filter-local');
   const sort = document.getElementById('sort'), results = document.getElementById('results');
   let part = 'display', run = 0, searchContext = null;
   const money = v => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(v)+' ₽';
   const element = (tag, text, cls) => { const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e; };
   const labels = {original_claimed:'Оригинал по описанию',copy:'Копия / аналог',unknown:'Не указано',new:'Новое по описанию',pulled:'Снятое',restored:'Восстановленное'};
-  function complete(row) { return row.price!==null && (!include.checked || row.labor!==null); }
-  function amount(row) { return (row.price??0)+(include.checked?(row.labor??0):0); }
   function render() {
     const sources = document.getElementById('sources');sources.replaceChildren();
     Object.entries(names).forEach(([key,name])=>{
@@ -29,7 +27,7 @@
       sources.append(box);
     });
     let items=Object.values(sourceState).flatMap(s=>s.status==='ok'?s.items:[]).filter(r=>(source.value==='all'||source.value===r.supplier)&&(tech.value==='all'||(tech.value==='unknown'?r.technology===null:tech.value===r.technology))&&(origin.value==='all'||origin.value===r.origin)&&(condition.value==='all'||condition.value===r.condition)&&(maxPrice.value===''||r.price!==null&&r.price<=Number(maxPrice.value))&&(!stock.checked||r.stock==='in')&&(!local.checked||/Комсомольск-на-Амуре/i.test(r.warehouse??'')));
-    items.sort((a,b)=>sort.value==='supplier'?names[a.supplier].localeCompare(names[b.supplier]):Number(complete(b))-Number(complete(a))||(amount(a)-amount(b)));
+    items.sort((a,b)=>sort.value==='supplier'?names[a.supplier].localeCompare(names[b.supplier]):Number(a.price===null)-Number(b.price===null)||((a.price??0)-(b.price??0)));
     const busy=Object.values(sourceState).some(s=>s.status==='loading');
     document.getElementById('result-count').textContent=`Предложений: ${items.length}${busy?' · поиск продолжается':''}`;
     results.replaceChildren();
@@ -38,8 +36,7 @@
       const card=element('article',undefined,'offer');const supplier=element('div',undefined,'supplier');supplier.append(element('b',names[r.supplier]),element('span',r.sku));card.append(supplier,element('h3',r.name));
       const tags=element('div',undefined,'tags');[r.technology,labels[r.origin],labels[r.condition]].filter(Boolean).forEach(t=>tags.append(element('span',t,'tag')));card.append(tags);
       card.append(element('div',({in:'В наличии',out:'Нет в наличии',order:'Под заказ / ожидается',unknown:'Наличие уточняется'})[r.stock]??'Уточнить наличие','stock '+r.stock),element('div',r.warehouse??'Склад не указан','warehouse'));
-      const p=element('div',undefined,'money');p.append(element('b',r.price===null?'Цена уточняется':money(amount(r))),element('span',complete(r)?(include.checked?'запчасть + работа':'запчасть'):'неполная сумма'));card.append(p);
-      card.append(element('p',r.price===null?'Цена отсутствует в ответе источника':`Деталь ${money(r.price)}${include.checked?(r.labor===null?' · работу уточнить':' · работа '+money(r.labor)):''}`,'breakdown'));
+      const p=element('div',undefined,'money');p.append(element('b',r.price===null?'Цена уточняется':money(r.price)),element('span','цена детали'));card.append(p);
       const link=element('a','Открыть у поставщика ↗');link.href=r.url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);
       const details=element('details');details.append(element('summary','Цена, наличие и условия'));
       details.append(element('p','Тип цены: '+r.price_type));
@@ -76,7 +73,7 @@
     if(run===id){button.disabled=false;button.textContent='Найти у поставщиков';}
   });
   document.querySelectorAll('[data-part]').forEach(b=>b.addEventListener('click',()=>{part=b.dataset.part;document.querySelectorAll('[data-part]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
-  [source,tech,origin,condition,maxPrice,stock,local,include,sort].forEach(e=>e.addEventListener('input',render));
+  [source,tech,origin,condition,maxPrice,stock,local,sort].forEach(e=>e.addEventListener('input',render));
   const dialog=document.getElementById('account-dialog');document.getElementById('account-open').addEventListener('click',()=>dialog.showModal());document.getElementById('account-close').addEventListener('click',()=>dialog.close());
   document.getElementById('account-form').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,m=document.getElementById('account-message');try{const response=await fetch('/api/account',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content},body:JSON.stringify(Object.fromEntries(new FormData(f)))});const data=await response.json();m.textContent=data.ok?'Пароль изменён':data.error;if(data.ok)f.reset();}catch{m.textContent='Не удалось сохранить. Повторите позже.'}});
   render();

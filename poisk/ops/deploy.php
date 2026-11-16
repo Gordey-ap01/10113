@@ -3,8 +3,8 @@ declare(strict_types=1);
 namespace Poisk\Deploy;
 
 // Bootstrap is installed once from GitHub. Release payloads can only replace the
-// seven application files below, inside this one independent site directory.
-const FILES = ['src/Http.php','src/Labor.php','src/State.php','src/Suppliers.php','src/Web.php','assets/app.js','assets/style.css'];
+// six application files below, inside this one independent site directory.
+const FILES = ['src/Http.php','src/State.php','src/Suppliers.php','src/Web.php','assets/app.js','assets/style.css'];
 const HOST = 'poisk.xn--101-eddot8cge.xn--p1ai';
 const ROOT = '/home/b/b9141846/poisk-service101';
 
