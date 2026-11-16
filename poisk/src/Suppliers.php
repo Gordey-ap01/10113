@@ -64,11 +64,17 @@ final class Suppliers
     public function search(string $source, string $query, string $part, int $page = 1): array
     {
         $suffix = ['display' => ' дисплей', 'battery' => ' аккумулятор', 'charging' => ' шлейф', 'back' => ' крышка', 'all' => ''][$part];
+        $articleQuery = preg_match('/^[a-z0-9_-]+$/iD', $query) && (str_contains($query, '-') || str_contains($query, '_') || preg_match('/^(?:zm)?\d{4,}$/iD', $query));
+        if ($articleQuery) $suffix = '';
         $q = $query . $suffix;
         $method = $source;
         $result = $this->$method($q, $page);
         $out = [];
+        $detailChecks = 0;
         foreach ($result['items'] as $item) {
+            // GreenSpark omits articles from search cards. For an exact article
+            // lookup, verify a bounded number of candidate product pages.
+            if ($source === 'greenspark' && $articleQuery && empty($item['sku']) && $detailChecks++ < 3) $item['sku'] = $this->greenArticle($item['url']);
             if (!self::matches($query, $item['name']) && !self::matches($query, $item['sku'] ?? '')) continue;
             $item = self::enrich($item);
             if ($part !== 'all' && $item['part'] !== $part) continue;
@@ -77,6 +83,16 @@ final class Suppliers
             $out[$item['id']] = $item;
         }
         return ['items' => array_values($out), 'context' => $result['context'], 'source_url' => $result['source_url'], 'scanned' => count($result['items']), 'page' => $page, 'next_page' => $result['next_page']];
+    }
+    private function greenArticle(string $url): string
+    {
+        $xp = self::dom($this->http->get($url));
+        $data = json_decode(self::text($xp, '//script[@id="__NUXT_DATA__"]'), true, 64, JSON_THROW_ON_ERROR);
+        foreach ($data as $v) if (is_array($v) && isset($v['article'], $v['prices'], $v['name']) && is_int($v['article'])) {
+            $article = self::nuxtRead($data, $v['article']);
+            if (is_string($article)) return $article;
+        }
+        return '';
     }
     private function taggsm(string $q, int $page = 1): array
     {

@@ -25,7 +25,8 @@ $e=Suppliers::enrich(['name'=>'Дисплей OR100 снятый + ALS','url'=>'
 check($e['origin']==='original_claimed'&&$e['condition']==='pulled','supplier originality claim');
 $fixture = new class implements \Poisk\HttpTransport {
     public string $source = '';
-    public function get(string $url): string { return file_get_contents(__DIR__ . '/fixtures/' . $this->source . '.html'); }
+    public string $lastUrl = '';
+    public function get(string $url): string { $this->lastUrl=$url;return file_get_contents(__DIR__ . '/fixtures/' . $this->source . '.html'); }
 };
 $sources = new Suppliers($fixture);
 foreach (['taggsm'=>'iPhone 12 mini','moba'=>'iPhone 12','dvsota'=>'Дисплей','greenspark'=>'iPhone 12'] as $source=>$query) {
@@ -38,5 +39,7 @@ foreach (['taggsm'=>'iPhone 12 mini','moba'=>'iPhone 12','dvsota'=>'Диспле
 }
 $fixture->source='moba';$result=$sources->search('moba','LCD-PMI120-CP-B-HOD','display');
 check(count($result['items'])===1,'article search matches supplier SKU');
+parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$params);
+check($params['q']==='LCD-PMI120-CP-B-HOD','article lookup does not append model search keywords');
 check(Labor::price($result['items'][0]['name'],'display',$result['items'][0]['technology'])===5000,'article result uses actual iPhone repair rate');
 echo "PASS: $checks checks\n";

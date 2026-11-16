@@ -78,7 +78,7 @@ function run(string $root, string $release, array $config): void
         if ($page === false) jsonResponse(['error' => 'Некорректная страница'], 422);
         if (!isset(Suppliers::LABELS[$source]) || !in_array($part, ['all','display','battery','charging','back'], true) || mb_strlen($query) < 2 || mb_strlen($query) > 100 || preg_match('/[\x00-\x1f<>]/u', $query)) jsonResponse(['error' => 'Укажите модель или артикул: от 2 до 100 символов'], 422);
         session_write_close();
-        $key = hash('sha256', 'v2|' . $source . '|' . mb_strtolower($query) . '|' . $part . '|' . $page);
+        $key = hash('sha256', 'v3|' . $source . '|' . mb_strtolower($query) . '|' . $part . '|' . $page);
         $s = $state->db->prepare('SELECT ts,value FROM cache WHERE k=?'); $s->execute([$key]); $cache = $s->fetch(\PDO::FETCH_ASSOC);
         if ($cache && time() - $cache['ts'] < 300) jsonResponse(json_decode($cache['value'], true) + ['cached' => true]);
         if (!$state->limit('search:' . $user['id'], 80, 600)) jsonResponse(['error' => 'Слишком частые запросы. Подождите несколько минут.'], 429);
