@@ -1,0 +1,144 @@
+<div class="fb-bg-white fb-rounded-xl fb-border fb-border-gray-line fb-h-full fb-flex-col fb-flex product-grid">
+<a :href="product.link || '#'" class="product-grid__image fb-h-[250px] fb-border-b fb-rounded-t-xl fb-overflow-hidden fb-border-gray-line fb-relative fb-w-full" href="/catalog/displei/displey-dlya-iphone-12-12-pro-a2403-a2407-v-sbore-s-tachskrinom-chernyy-hard-oled-full-hd-ploshchadk/">
+
+<div class="fb-absolute fb-top-0 fb-left-0 fb-pl-3 fb-pt-3 fb-w-full fb-flex">
+ </div>
+</a>
+<div class="fb-px-4 xl:fb-px-6 fb-py-5 fb-grow fb-flex fb-flex-col product-grid__content">
+<a :href="product.link || '#'" class="fb-flex fb-flex-col" href="/catalog/displei/displey-dlya-iphone-12-12-pro-a2403-a2407-v-sbore-s-tachskrinom-chernyy-hard-oled-full-hd-ploshchadk/">
+<div class="fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-lightest product-grid__article">
+        Артикул: <span x-text="product.article">LCD-PMI120-CP-B-HOD</span>
+</div>
+<div class="fb-mt-2 xl:fb-mt-2.5 fb-mobile-16-semibold xl:fb-desktop-18-semibold fb-text-gray-darker product-grid__name">
+<span :title="product.name" class="fb-text-ellipsis fb-block fb-overflow-hidden" x-text="$textHm(product.name)">Дисплей для iPhone 12/12 Pro (A2403/A2407) в сборе с тачскрином Черный - (Hard OLED, Full HD COF, 650 Кд/м²) (площадка под IC)</span>
+</div>
+</a>
+<div class="fb-grow">
+<div class="fb-flex fb-items-center fb-mt-3 xl:fb-mt-4" style=" " x-show="product.meta.available">
+<div>
+
+</div>
+<div class="fb-ml-1.5 xl:fb-ml-2 fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-accent-2-dark product-grid_avail">В наличии</div>
+</div>
+<div class="fb-text-secondary fb-inline-block hover:fb-z-[1] fb-mt-3 xl:fb-mt-4 fb-group/hint fb-border-b fb-border-dotted hover:fb-text-accent-dark hover:fb-border-accent-dark fb-cursor-pointer fb-relative" x-show="product.meta.willArrive">
+<div class="product-grid_will-arrive fb-mobile-14-regular xl:fb-desktop-14-regular" x-text="product.meta.willArrive"></div>
+<div class="fb-text-secondary group-hover/hint:fb-block fb-hidden fb-min-w-40 fb-translate-y-2 fb-cursor-pointer fb-absolute fb-top-full fb-left-0 fb-bg-white fb-p-3 fb-rounded-md fb-shadow-md">
+<span class="product-grid_will-arrive-hint fb-mobile-14-regular" x-text="product.meta.willArriveHint"></span>
+</div>
+</div>
+<div class="fb-flex fb-items-start fb-mt-3 xl:fb-mt-4" x-show="product.meta.storeIdCourierDelivery">
+<div>
+
+</div>
+
+
+</div>
+<div class="product-grid_avail-delivery fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-darker fb-mt-3 xl:fb-mt-3.5 fb-hidden" x-show="product.meta.delivery">
+        Доставка: доступна
+      </div>
+<div class="product-grid_avail-pickup fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-darker fb-mt-2" style="display: none;" x-show="product.meta.pickup">
+        Самовывоз: <span @click="window.FB_MOBA.actions.openModalAvailabilityInfo(product.id)" class="fb-text-accent fb-border-b fb-border-dotted fb-border-accent fb-cursor-pointer" x-text="product.meta.pickup"></span>
+</div>
+<div class="product-grid_not-avail fb-desktop-14-regular fb-text-gray-darker fb-mt-4 fb-z-[2]" style="display: none;" x-show="product.meta.notAvailableText">
+<span x-text="product.meta.notAvailableText"></span>
+</div>
+</div>
+<div class="fb-mt-4 xl:fb-mt-6 fb-flex fb-items-center fb-flex-auto">
+<div class="product-grid__price fb-mobile-24-semibold xl:fb-desktop-24-semibold fb-text-gray-darker" x-text="product.price + ' ₽'">3100 ₽</div>
+<div class="fb-ml-4 fb-flex fb-items-center product-grid__discount-container">
+<div class="product-grid__discount_price fb-text-accent-2 fb-mobile-16-semibold xl:fb-desktop-16-semibold fb-border fb-border-accent-2 fb-rounded-sm fb-px-2 fb-py-1" x-show="!!product.discountPrice" x-text="product.discountPrice + ' ₽'">2580 ₽</div>
+<a :href="product.questionUrl || '#'" :target="product.questionUrl ? '_blank' : '_self'" class="fb-ml-4 product-grid__question" href="/help/program-loyalnost/" target="_blank" x-show="!!product.questionUrl">
+
+</a>
+</div>
+</div>
+<div class="fb-mt-4 xl:fb-mt-6 fb-flex">
+<div class="fb-grow">
+<div @cart_action.document="eventHandler" class="cart-btn" x-data="cartProductState(product.id, product.basket?.max, product.basket?.current, product.basket?.in_stock, product.price)">
+<button @click="addToCart()" class="fb-h-11 fb-w-full loading fb-flex fb-items-center fb-justify-center fb-gap-2 fb-border fb-border-accent fb-text-accent fb-rounded-lg hover:fb-bg-accent-lighter fb-desktop-14-semibold cart-btn__add" x-show="quantity == 0">
+  В корзину
+  
+</button>
+
+</div>
+</div>
+<div class="fb-ml-4 fb-shrink-0 product-grid__actions-fvt">
+<button @click="toggleFavorite()" @favorite_action.document="eventHandler" class="fb-rounded-lg fb-border-accent fb-border fb-w-11 fb-h-11 fb-flex fb-items-center fb-justify-center hover:fb-bg-accent-lighter fvt-btn" x-data="favoriteState(product.id, product.favorite)">
+<i :class="favorite ? 'product-card_like-active fb-w-6 fb-h-6' : 'product-card_like fb-w-6 fb-h-6'"></i>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="fb-bg-white fb-rounded-xl fb-border fb-border-gray-line fb-h-full fb-flex-col fb-flex product-grid">
+<a :href="product.link || '#'" class="product-grid__image fb-h-[250px] fb-border-b fb-rounded-t-xl fb-overflow-hidden fb-border-gray-line fb-relative fb-w-full" href="/catalog/displei/displey-dlya-iphone-12-12-pro-a2403-a2407-v-sbore-s-tachskrinom-chernyy-in-cell-standart/">
+
+<div class="fb-absolute fb-top-0 fb-left-0 fb-pl-3 fb-pt-3 fb-w-full fb-flex">
+ </div>
+</a>
+<div class="fb-px-4 xl:fb-px-6 fb-py-5 fb-grow fb-flex fb-flex-col product-grid__content">
+<a :href="product.link || '#'" class="fb-flex fb-flex-col" href="/catalog/displei/displey-dlya-iphone-12-12-pro-a2403-a2407-v-sbore-s-tachskrinom-chernyy-in-cell-standart/">
+<div class="fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-lightest product-grid__article">
+        Артикул: <span x-text="product.article">LCD-PMI120-CP-B-INCL-CHPQLT</span>
+</div>
+<div class="fb-mt-2 xl:fb-mt-2.5 fb-mobile-16-semibold xl:fb-desktop-18-semibold fb-text-gray-darker product-grid__name">
+<span :title="product.name" class="fb-text-ellipsis fb-block fb-overflow-hidden" x-text="$textHm(product.name)">Дисплей для iPhone 12/12 Pro (A2403/A2407) в сборе с тачскрином Черный - (In-Cell, HD COG, 350 Кд/м²) (площадка под IC) Стандарт</span>
+</div>
+</a>
+<div class="fb-grow">
+<div class="fb-flex fb-items-center fb-mt-3 xl:fb-mt-4" style=" " x-show="product.meta.available">
+<div>
+
+</div>
+<div class="fb-ml-1.5 xl:fb-ml-2 fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-accent-2-dark product-grid_avail">В наличии</div>
+</div>
+<div class="fb-text-secondary fb-inline-block hover:fb-z-[1] fb-mt-3 xl:fb-mt-4 fb-group/hint fb-border-b fb-border-dotted hover:fb-text-accent-dark hover:fb-border-accent-dark fb-cursor-pointer fb-relative" x-show="product.meta.willArrive">
+<div class="product-grid_will-arrive fb-mobile-14-regular xl:fb-desktop-14-regular" x-text="product.meta.willArrive"></div>
+<div class="fb-text-secondary group-hover/hint:fb-block fb-hidden fb-min-w-40 fb-translate-y-2 fb-cursor-pointer fb-absolute fb-top-full fb-left-0 fb-bg-white fb-p-3 fb-rounded-md fb-shadow-md">
+<span class="product-grid_will-arrive-hint fb-mobile-14-regular" x-text="product.meta.willArriveHint"></span>
+</div>
+</div>
+<div class="fb-flex fb-items-start fb-mt-3 xl:fb-mt-4" x-show="product.meta.storeIdCourierDelivery">
+<div>
+
+</div>
+
+
+</div>
+<div class="product-grid_avail-delivery fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-darker fb-mt-3 xl:fb-mt-3.5 fb-hidden" x-show="product.meta.delivery">
+        Доставка: доступна
+      </div>
+<div class="product-grid_avail-pickup fb-mobile-14-regular xl:fb-desktop-14-regular fb-text-gray-darker fb-mt-2" style="display: none;" x-show="product.meta.pickup">
+        Самовывоз: <span @click="window.FB_MOBA.actions.openModalAvailabilityInfo(product.id)" class="fb-text-accent fb-border-b fb-border-dotted fb-border-accent fb-cursor-pointer" x-text="product.meta.pickup"></span>
+</div>
+<div class="product-grid_not-avail fb-desktop-14-regular fb-text-gray-darker fb-mt-4 fb-z-[2]" style="display: none;" x-show="product.meta.notAvailableText">
+<span x-text="product.meta.notAvailableText"></span>
+</div>
+</div>
+<div class="fb-mt-4 xl:fb-mt-6 fb-flex fb-items-center fb-flex-auto">
+<div class="product-grid__price fb-mobile-24-semibold xl:fb-desktop-24-semibold fb-text-gray-darker" x-text="product.price + ' ₽'">1200 ₽</div>
+<div class="fb-ml-4 fb-flex fb-items-center product-grid__discount-container">
+<div class="product-grid__discount_price fb-text-accent-2 fb-mobile-16-semibold xl:fb-desktop-16-semibold fb-border fb-border-accent-2 fb-rounded-sm fb-px-2 fb-py-1" x-show="!!product.discountPrice" x-text="product.discountPrice + ' ₽'">1020 ₽</div>
+<a :href="product.questionUrl || '#'" :target="product.questionUrl ? '_blank' : '_self'" class="fb-ml-4 product-grid__question" href="/help/program-loyalnost/" target="_blank" x-show="!!product.questionUrl">
+
+</a>
+</div>
+</div>
+<div class="fb-mt-4 xl:fb-mt-6 fb-flex">
+<div class="fb-grow">
+<div @cart_action.document="eventHandler" class="cart-btn" x-data="cartProductState(product.id, product.basket?.max, product.basket?.current, product.basket?.in_stock, product.price)">
+<button @click="addToCart()" class="fb-h-11 fb-w-full loading fb-flex fb-items-center fb-justify-center fb-gap-2 fb-border fb-border-accent fb-text-accent fb-rounded-lg hover:fb-bg-accent-lighter fb-desktop-14-semibold cart-btn__add" x-show="quantity == 0">
+  В корзину
+  
+</button>
+
+</div>
+</div>
+<div class="fb-ml-4 fb-shrink-0 product-grid__actions-fvt">
+<button @click="toggleFavorite()" @favorite_action.document="eventHandler" class="fb-rounded-lg fb-border-accent fb-border fb-w-11 fb-h-11 fb-flex fb-items-center fb-justify-center hover:fb-bg-accent-lighter fvt-btn" x-data="favoriteState(product.id, product.favorite)">
+<i :class="favorite ? 'product-card_like-active fb-w-6 fb-h-6' : 'product-card_like fb-w-6 fb-h-6'"></i>
+</button>
+</div>
+</div>
+</div>
+</div>

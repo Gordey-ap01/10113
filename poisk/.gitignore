@@ -1,0 +1,7 @@
+/var/
+/config.php
+/build/
+/.local/
+__pycache__/
+*.pyc
+
