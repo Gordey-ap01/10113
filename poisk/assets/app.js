@@ -9,10 +9,42 @@
   const maxPrice = document.getElementById('filter-price'), stock = document.getElementById('filter-stock');
   const local = document.getElementById('filter-local');
   const sort = document.getElementById('sort'), results = document.getElementById('results');
-  let part = 'display', run = 0, searchContext = null;
+  const query = document.getElementById('query'), suggestions = document.getElementById('search-suggestions');
+  const historyStatus = document.getElementById('history-status');
+  const parts = {all:'Все детали',display:'Экран',battery:'Аккумулятор',charging:'Нижняя плата / шлейф',back:'Задняя крышка'};
+  let part = 'all', run = 0, searchContext = null, history = [], historyRequest = 0;
   const money = v => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(v)+' ₽';
   const element = (tag, text, cls) => { const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e; };
   const labels = {original_claimed:'Оригинал по описанию',copy:'Копия / аналог',unknown:'Не указано',new:'Новое по описанию',pulled:'Снятое',restored:'Восстановленное'};
+  function selectPart(value) {
+    part=value;
+    document.querySelectorAll('[data-part]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===value)));
+  }
+  function renderSuggestions() {
+    const text=query.value.trim().toLocaleLowerCase('ru-RU');
+    suggestions.replaceChildren();
+    history.filter(item=>item.q.toLocaleLowerCase('ru-RU').includes(text)).slice(0,6).forEach(item=>{
+      const button=element('button',undefined,'suggestion');button.type='button';
+      button.append(element('span',item.q));
+      if(item.part!=='all')button.append(element('small',parts[item.part]));
+      button.title=`Повторить поиск: ${item.q} · ${parts[item.part]}`;
+      button.addEventListener('click',()=>{query.value=item.q;selectPart(item.part);renderSuggestions();form.requestSubmit();});
+      suggestions.append(button);
+    });
+  }
+  async function updateHistory(context=null) {
+    const id=++historyRequest;
+    try {
+      const response=await fetch('/api/history',context?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content},body:JSON.stringify(context)}:{credentials:'same-origin'});
+      if(!response.ok)throw new Error('History unavailable');
+      const data=await response.json();if(id!==historyRequest)return;
+      history=data.items;
+      historyStatus.textContent=history.length?'Нажмите на подсказку, чтобы повторить поиск с актуальными ценами.':'Ваши запросы появятся здесь после поиска. Часто повторяемые будут выше.';
+      renderSuggestions();
+    } catch {
+      if(id===historyRequest)historyStatus.textContent='Не удалось обновить подсказки. Поиск у поставщиков доступен.';
+    }
+  }
   function render() {
     const sources = document.getElementById('sources');sources.replaceChildren();
     Object.entries(names).forEach(([key,name])=>{
@@ -61,8 +93,9 @@
   }
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(!form.reportValidity())return;
-    const id=++run,q=document.getElementById('query').value.trim();
+    const id=++run,q=query.value.trim();
     searchContext={q,part};
+    updateHistory(searchContext);
     const button=document.getElementById('search-button');button.disabled=true;button.textContent='Ищем…';
     Object.keys(names).forEach(k=>sourceState[k]={status:'loading',items:[]});render();
     await Promise.all(Object.keys(names).map(async supplier=>{
@@ -72,9 +105,11 @@
     }));
     if(run===id){button.disabled=false;button.textContent='Найти у поставщиков';}
   });
-  document.querySelectorAll('[data-part]').forEach(b=>b.addEventListener('click',()=>{part=b.dataset.part;document.querySelectorAll('[data-part]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+  document.querySelectorAll('[data-part]').forEach(b=>b.addEventListener('click',()=>selectPart(b.dataset.part)));
+  query.addEventListener('input',renderSuggestions);
   [source,tech,origin,condition,maxPrice,stock,local,sort].forEach(e=>e.addEventListener('input',render));
   const dialog=document.getElementById('account-dialog');document.getElementById('account-open').addEventListener('click',()=>dialog.showModal());document.getElementById('account-close').addEventListener('click',()=>dialog.close());
   document.getElementById('account-form').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,m=document.getElementById('account-message');try{const response=await fetch('/api/account',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content},body:JSON.stringify(Object.fromEntries(new FormData(f)))});const data=await response.json();m.textContent=data.ok?'Пароль изменён':data.error;if(data.ok)f.reset();}catch{m.textContent='Не удалось сохранить. Повторите позже.'}});
   render();
+  updateHistory();
 })();

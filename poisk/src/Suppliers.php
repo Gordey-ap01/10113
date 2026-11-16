@@ -45,8 +45,10 @@ final class Suppliers
         if (preg_match('/iphone\s*(\d+)\s*(pro\s*max|pro|plus|mini)?/iu', $query, $m)) {
             preg_match_all('~(?:iphone\s*|/\s*(?:iphone\s*)?)' . preg_quote($m[1], '~') . '(?!\d)\s*(pro\s*max|pro|plus|mini)?~iu', $name, $variants, PREG_SET_ORDER);
             $wanted = strtolower(preg_replace('/\s/', '', $m[2] ?? ''));
-            foreach ($variants as $variant) if ($wanted === strtolower(preg_replace('/\s/', '', $variant[1] ?? ''))) return true;
-            return false;
+            $modelFound = false;
+            foreach ($variants as $variant) if ($wanted === strtolower(preg_replace('/\s/', '', $variant[1] ?? ''))) { $modelFound = true; break; }
+            if (!$modelFound) return false;
+            $query = str_replace($m[0], '', $query);
         }
         $tokens = preg_split('/\s+/u', mb_strtolower(trim($query))) ?: [];
         $name = mb_strtolower($name);

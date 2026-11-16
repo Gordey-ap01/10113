@@ -15,6 +15,10 @@ final class State
           CREATE INDEX IF NOT EXISTS attempts_key ON attempts(k,ts);
           CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, ts INTEGER NOT NULL, value TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS releases (id TEXT PRIMARY KEY, ts INTEGER NOT NULL);');
+        $this->db->exec('CREATE TABLE IF NOT EXISTS search_history (
+          user_id INTEGER NOT NULL, query_key TEXT NOT NULL, query TEXT NOT NULL, part TEXT NOT NULL,
+          uses INTEGER NOT NULL DEFAULT 1, last_used INTEGER NOT NULL,
+          PRIMARY KEY(user_id,query_key,part));');
         $this->db->exec('DELETE FROM attempts WHERE ts < ' . (time() - 86400));
         if ($this->db->query('SELECT COUNT(*) FROM users')->fetchColumn() == 0 && !empty($config['admin_hash'])) {
             $s = $this->db->prepare('INSERT INTO users(login,hash,role) VALUES(?,?,?)');
@@ -26,6 +30,26 @@ final class State
         $s = $this->db->prepare('SELECT COUNT(*) FROM attempts WHERE k=? AND ts>?'); $s->execute([$key, time() - $window]);
         if ((int) $s->fetchColumn() >= $max) return false;
         $s = $this->db->prepare('INSERT INTO attempts(k,ts) VALUES(?,?)'); $s->execute([$key, time()]); return true;
+    }
+    public function searchHistory(int $userId): array
+    {
+        $s = $this->db->prepare('SELECT query AS q,part,uses FROM search_history WHERE user_id=? ORDER BY uses DESC,last_used DESC,query_key ASC LIMIT 50');
+        $s->execute([$userId]);
+        return $s->fetchAll(\PDO::FETCH_ASSOC);
+    }
+    public function rememberSearch(int $userId, string $query, string $part): void
+    {
+        $key = mb_strtolower(preg_replace('/\s+/u', ' ', trim($query)));
+        $this->db->beginTransaction();
+        try {
+            $s = $this->db->prepare('INSERT INTO search_history(user_id,query_key,query,part,last_used) VALUES(?,?,?,?,?)
+              ON CONFLICT(user_id,query_key,part) DO UPDATE SET query=excluded.query,uses=uses+1,last_used=excluded.last_used');
+            $s->execute([$userId,$key,$query,$part,time()]);
+            $s = $this->db->prepare('DELETE FROM search_history WHERE user_id=? AND rowid NOT IN
+              (SELECT rowid FROM search_history WHERE user_id=? ORDER BY last_used DESC,rowid DESC LIMIT 50)');
+            $s->execute([$userId,$userId]);
+            $this->db->commit();
+        } catch (\Throwable $e) { $this->db->rollBack(); throw $e; }
     }
     public function log(\Throwable $e): void
     {

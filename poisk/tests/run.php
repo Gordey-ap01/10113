@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../src/Http.php';
 require __DIR__ . '/../src/Suppliers.php';
+require __DIR__ . '/../src/State.php';
 use Poisk\Http; use Poisk\Suppliers;
 $checks = 0;
 function check(bool $pass, string $label): void { global $checks; $checks++; if (!$pass) { fwrite(STDERR,"FAIL: $label\n"); exit(1); } }
@@ -12,6 +13,8 @@ check(!Suppliers::matches('iPhone 12','Дисплей для iPhone 12 mini'),'e
 check(!Suppliers::matches('iPhone 12','Дисплей для iPhone 13'),'exclude other generation');
 check(!Suppliers::matches('iPhone 12 Pro','Дисплей для iPhone 12 Pro Max'),'exclude pro max');
 check(Suppliers::matches('iPhone 12 Pro','Дисплей для iPhone 12/12 Pro'),'combined model includes Pro');
+check(Suppliers::matches('динамик iPhone 12','Динамик разговорный для iPhone 12'),'arbitrary part name with an exact iPhone model');
+check(!Suppliers::matches('динамик iPhone 12','Дисплей для iPhone 12'),'model match does not discard requested part name');
 check(Suppliers::enrich(['name'=>'Наклейка на дисплей iPhone 12'])['part']==='other','display adhesive is not a display repair');
 check(Suppliers::enrich(['name'=>'Шлейф аккумулятора iPhone 12'])['part']==='other','battery flex is not a battery repair');
 check(Suppliers::enrich(['name'=>'Аккумулятор неоригинальный'])['origin']==='copy','non-original does not become original');
@@ -39,4 +42,28 @@ $fixture->source='moba';$result=$sources->search('moba','LCD-PMI120-CP-B-HOD','d
 check(count($result['items'])===1,'article search matches supplier SKU');
 parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$params);
 check($params['q']==='LCD-PMI120-CP-B-HOD','article lookup does not append model search keywords');
+$sources->search('moba','iPhone 12','all');
+parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$params);
+check($params['q']==='iPhone 12','all-parts search does not force a part category');
+
+$historyRoot = sys_get_temp_dir() . '/poisk-history-' . bin2hex(random_bytes(8));
+$state = new \Poisk\State($historyRoot, []);
+try {
+    $state->rememberSearch(1,'Динамик iPhone 12','all');
+    $state->rememberSearch(1,'Камера Samsung A54','all');
+    $state->rememberSearch(1,'динамик   IPHONE 12','all');
+    $state->rememberSearch(2,'Микрофон','all');
+    $history = $state->searchHistory(1);
+    check(count($history)===2 && $history[0]['uses']===2,'repeat queries merge across letter case and spaces and rank first');
+    check($state->searchHistory(2)[0]['q']==='Микрофон' && count($state->searchHistory(2))===1,'history belongs to the signed-in master');
+    $state->rememberSearch(1,'динамик   IPHONE 12','display');
+    check(count($state->searchHistory(1))===3,'history preserves the selected category for repeat searches');
+    for ($i=0;$i<55;$i++) $state->rememberSearch(1,'Деталь '.$i,'all');
+    check(count($state->searchHistory(1))===50,'history retention is bounded per master');
+    check(count($state->searchHistory(2))===1,'trimming one history preserves another master history');
+} finally {
+    unset($state);
+    foreach (['/var/poisk.sqlite-wal','/var/poisk.sqlite-shm','/var/poisk.sqlite'] as $file) if (is_file($historyRoot.$file)) unlink($historyRoot.$file);
+    foreach (['/var/sessions','/var/http','/var',''] as $dir) rmdir($historyRoot.$dir);
+}
 echo "PASS: $checks checks\n";
