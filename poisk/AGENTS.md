@@ -7,4 +7,4 @@
 - Compare supplier part prices only. The master determines repair labor independently; do not add labor rates, repair totals or a repair price list.
 - Prioritize confirmed stock in Komsomolsk-on-Amur. GreenSpark shop 249529 (Lenina 4) must be selected and verified; never present another city's stock as local.
 - Code deployment is from branch `feature/poisk-service101` through its dedicated workflow.
-- Never modify root-domain SSL, DNS, PHP configuration, or either existing site's files/database.
+- Never modify either existing site's files/database or PHP configuration. On 16.11.2026 the owner explicitly expanded SSL work to service101.рф and its used subdomains; certificate configuration and DNS changes strictly required for that certificate are authorized. Do not otherwise change existing-site DNS or settings.
