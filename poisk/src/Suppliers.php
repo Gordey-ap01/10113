@@ -5,6 +5,7 @@ namespace Poisk;
 final class Suppliers
 {
     public const LABELS = ['taggsm' => 'TAGGSM', 'moba' => 'MOBA', 'dvsota' => 'DVSOTA', 'greenspark' => 'GreenSpark'];
+    public const GREEN_LOCAL_SHOP = 249529;
     public function __construct(private HttpTransport $http) {}
     private static function dom(string $html): \DOMXPath
     {
@@ -36,6 +37,7 @@ final class Suppliers
         $item['origin'] = preg_match('/copy|копия|аналог|не\s?ориг/iu', $n) ? 'copy' : (preg_match('/ориг|\bor\b|or100|or new|подлинн/iu', $n) ? 'original_claimed' : 'unknown');
         $item['condition'] = preg_match('/восстанов|\bref\b|refurb|заменен.{0,12}стекло/iu', $n) ? 'restored' : (preg_match('~снят|разбор|б[./]у~u', $n) ? 'pulled' : (preg_match('/новый|\bnew\b/iu', $n) ? 'new' : 'unknown'));
         $item['stock'] ??= 'unknown'; $item['warehouse'] ??= null;
+        $item['is_local'] = preg_match('/Комсомольск[-\s]на[-\s]Амуре/iu', $item['warehouse'] ?? '') === 1;
         $item['delivery'] ??= null; $item['delivery_cost'] ??= null;
         $item['quantity'] = null;
         return $item;
@@ -165,10 +167,13 @@ final class Suppliers
     }
     private function greenspark(string $q, int $page = 1): array
     {
-        $url = 'https://green-spark.ru/search/?' . http_build_query(['q' => $q, 'sectionId' => 0, 'onlyAvailable' => 'false', 'page' => $page]);
+        $url = 'https://green-spark.ru/search/?' . http_build_query(['q' => $q, 'sectionId' => 0, 'onlyAvailable' => 'false', 'page' => $page, 'set_city' => self::GREEN_LOCAL_SHOP]);
         $xp = self::dom($this->http->get($url));
         $raw = self::text($xp, '//script[@id="__NUXT_DATA__"]');
-        $data = json_decode($raw, true, 64, JSON_THROW_ON_ERROR); $items = [];
+        $data = json_decode($raw, true, 64, JSON_THROW_ON_ERROR); $items = []; $shop = null;
+        foreach ($data as $v) if (is_array($v) && isset($v['$scurrentShop']) && is_int($v['$scurrentShop'])) { $shop = self::nuxtRead($data, $v['$scurrentShop']); break; }
+        if (!is_array($shop) || (int) ($shop['id'] ?? 0) !== self::GREEN_LOCAL_SHOP || ($shop['cityName'] ?? '') !== 'Комсомольск-на-Амуре') throw new \RuntimeException('GreenSpark не подтвердил выбранный магазин в Комсомольске-на-Амуре');
+        $warehouse = ($shop['name'] ?? $shop['cityName']) . (!empty($shop['address']) ? ' · ' . $shop['address'] : '');
         foreach ($data as $v) {
             if (!is_array($v) || !isset($v['id'], $v['name'], $v['prices'], $v['url'])) continue;
             $get = static fn(string $key) => isset($v[$key]) && is_int($v[$key]) ? self::nuxtRead($data, $v[$key]) : null;
@@ -183,14 +188,13 @@ final class Suppliers
             if (str_starts_with($link, '/')) $link = 'https://green-spark.ru' . $link;
             if (!Http::allowed($link)) continue;
             $prices = $get('prices'); $p = is_array($prices) ? array_values(array_filter($prices, 'is_array')) : [];
-            $stores = $get('availableStores'); $store = is_array($stores) ? ($stores[0] ?? null) : null;
             $quantity = $get('quantity');
             $items[] = ['name' => $name, 'url' => $link, 'sku' => is_string($article) ? $article : '', 'source_id' => $get('id'), 'price' => isset($p[0]['price']) ? (float) $p[0]['price'] : null,
                 'other_prices' => array_values(array_map(static fn($x) => ['name' => $x['name'] ?? '', 'price' => $x['price'] ?? null], array_slice($p, 1))),
-                'price_type' => $p[0]['name'] ?? 'Цена на сайте', 'warehouse' => is_array($store) ? ($store['name'] ?? 'Магазин не указан') : 'Магазин не указан',
+                'price_type' => $p[0]['name'] ?? 'Цена на сайте', 'warehouse' => $warehouse,
                 'stock' => in_array($quantity, ['few','enough','many','much','available'], true) ? 'in' : (in_array($quantity, ['none','unavailable','not'], true) ? 'out' : 'unknown'),
                 'stock_details' => ['few' => 'Мало', 'enough' => 'Достаточно', 'many' => 'Много', 'none' => 'Нет в наличии'][$quantity ?? ''] ?? (string) $quantity];
         }
-        return ['items' => $items, 'context' => 'У GreenSpark цена зависит от выбранного магазина. Здесь указан магазин, фактически вернувшийся в ответе сайта; он может находиться в другом городе.', 'source_url' => $url, 'next_page' => self::nextPage($xp, $page)];
+        return ['items' => $items, 'context' => 'GreenSpark — Комсомольск-на-Амуре, проспект Ленина, 4. Магазин подтверждён ответом сайта; цены и наличие относятся к нему. Точный остаток и возможность самовывоза уточните перед поездкой.', 'source_url' => $url, 'next_page' => self::nextPage($xp, $page)];
     }
 }

@@ -78,6 +78,9 @@ final class Http implements HttpTransport
                     }
                     if ($code !== null && !$challengeUsed) {
                         $challengeUsed = true;
+                        // The public check schedules its cookie calculation after one second.
+                        // Submitting earlier can return the same interstitial again.
+                        usleep(1_000_000);
                         $extra = '__jhash_=' . self::jsHash($code) . '; __jua_=' . rawurlencode(self::UA);
                         continue;
                     }

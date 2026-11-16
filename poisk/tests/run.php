@@ -22,12 +22,15 @@ check(Suppliers::enrich(['name'=>'Дисплей снятый, заменено 
 $e=Suppliers::enrich(['name'=>'Дисплей iPhone 12 copy OLED REF','url'=>'https://taggsm.ru/','price'=>100]);
 check($e['technology']==='OLED'&&$e['origin']==='copy'&&$e['condition']==='restored','independent quality fields');
 check($e['quantity']===null&&$e['delivery_cost']===null,'unknown quantity and delivery stay unknown');
+check(Suppliers::enrich(['name'=>'Деталь','warehouse'=>'GreenSpark Комсомольск-на-Амуре · Ленина, 4'])['is_local'],'confirmed local warehouse');
+check(!Suppliers::enrich(['name'=>'Деталь для Комсомольска-на-Амуре','warehouse'=>'Москва'])['is_local'],'locality comes from warehouse rather than product name');
 $e=Suppliers::enrich(['name'=>'Дисплей OR100 снятый + ALS','url'=>'https://taggsm.ru/','price'=>100]);
 check($e['origin']==='original_claimed'&&$e['condition']==='pulled','supplier originality claim');
 $fixture = new class implements \Poisk\HttpTransport {
     public string $source = '';
     public string $lastUrl = '';
-    public function get(string $url): string { $this->lastUrl=$url;return file_get_contents(__DIR__ . '/fixtures/' . $this->source . '.html'); }
+    public ?string $override = null;
+    public function get(string $url): string { $this->lastUrl=$url;return $this->override ?? file_get_contents(__DIR__ . '/fixtures/' . $this->source . '.html'); }
 };
 $sources = new Suppliers($fixture);
 foreach (['taggsm'=>'iPhone 12 mini','moba'=>'iPhone 12','dvsota'=>'Дисплей','greenspark'=>'iPhone 12'] as $source=>$query) {
@@ -36,8 +39,20 @@ foreach (['taggsm'=>'iPhone 12 mini','moba'=>'iPhone 12','dvsota'=>'Диспле
     check($result['items'][0]['price']>0,'actual supplier price: '.$source);
     check(str_contains($result['items'][0]['url'],'/catalog/')||str_contains($result['items'][0]['url'],'product_id='),'actual product URL: '.$source);
     if($source==='moba')check(str_starts_with($result['items'][0]['name'],'Дисплей'),'MOBA hidden template tag is excluded');
-    if($source==='greenspark')check($result['items'][0]['stock']==='out'&&$result['items'][1]['stock']==='in','Nuxt references preserve stock per product');
+    if($source==='greenspark') {
+        check($result['items'][0]['stock']==='out'&&$result['items'][1]['stock']==='in','Nuxt references preserve stock per product');
+        check($result['items'][0]['is_local']&&str_contains($result['items'][0]['warehouse'],'Ленина, 4'),'out-of-stock record retains its confirmed local warehouse');
+        check($result['items'][1]['price']===4360.0&&$result['items'][1]['price_type']==='Розница.','price belongs to the selected local shop');
+        parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$greenParams);
+        check($greenParams['set_city']==='249529','GreenSpark explicitly requests the Komso shop');
+    }
 }
+$fixture->source='greenspark';
+$fixture->override=str_replace(['249529','Комсомольск-на-Амуре'],['16366','Москва'],file_get_contents(__DIR__.'/fixtures/greenspark.html'));
+$wrongShopRejected=false;
+try {$sources->search('greenspark','iPhone 12','display');}catch(RuntimeException){$wrongShopRejected=true;}
+check($wrongShopRejected,'Moscow response cannot be presented as local stock');
+$fixture->override=null;
 $fixture->source='moba';$result=$sources->search('moba','LCD-PMI120-CP-B-HOD','display');
 check(count($result['items'])===1,'article search matches supplier SKU');
 parse_str(parse_url($fixture->lastUrl,PHP_URL_QUERY),$params);

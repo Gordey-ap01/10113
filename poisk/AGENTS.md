@@ -5,5 +5,6 @@
 - Keep credentials, sessions, databases, logs and supplier cookies outside public_html and Git.
 - Preserve exact author signature `Gordey_ap01`.
 - Compare supplier part prices only. The master determines repair labor independently; do not add labor rates, repair totals or a repair price list.
+- Prioritize confirmed stock in Komsomolsk-on-Amur. GreenSpark shop 249529 (Lenina 4) must be selected and verified; never present another city's stock as local.
 - Code deployment is from branch `feature/poisk-service101` through its dedicated workflow.
 - Never modify root-domain SSL, DNS, PHP configuration, or either existing site's files/database.

@@ -2,7 +2,7 @@
   'use strict';
   const form = document.getElementById('search-form');
   if (!form) return;
-  const names = {taggsm:'TAGGSM',moba:'MOBA',dvsota:'DVSOTA',greenspark:'GreenSpark'};
+  const names = {greenspark:'GreenSpark',taggsm:'TAGGSM',moba:'MOBA',dvsota:'DVSOTA'};
   const sourceState = Object.fromEntries(Object.keys(names).map(k=>[k,{status:'idle',items:[]}])) ;
   const tech = document.getElementById('filter-tech'), source = document.getElementById('filter-source');
   const origin = document.getElementById('filter-origin'), condition = document.getElementById('filter-condition');
@@ -54,18 +54,21 @@
       else if(data.status==='error')text='Не удалось обновить';
       else if(data.status==='ok')text=`${data.items.length} предложений · ${new Date(data.checked_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Vladivostok'})}${data.cached?' · кеш':''}`;
       box.append(element('span',text));
+      if(key==='greenspark')box.append(element('small','Комсомольск-на-Амуре · Ленина, 4'));
       if(data.next_page){const more=element('button',data.loadingMore?'Загружаем…':'Ещё предложения','quiet');more.type='button';more.disabled=!!data.loadingMore;more.addEventListener('click',()=>loadMore(key));box.append(more);}
       if(data.pageError)box.append(element('span','Следующую страницу получить не удалось'));
       sources.append(box);
     });
-    let items=Object.values(sourceState).flatMap(s=>s.status==='ok'?s.items:[]).filter(r=>(source.value==='all'||source.value===r.supplier)&&(tech.value==='all'||(tech.value==='unknown'?r.technology===null:tech.value===r.technology))&&(origin.value==='all'||origin.value===r.origin)&&(condition.value==='all'||condition.value===r.condition)&&(maxPrice.value===''||r.price!==null&&r.price<=Number(maxPrice.value))&&(!stock.checked||r.stock==='in')&&(!local.checked||/Комсомольск-на-Амуре/i.test(r.warehouse??'')));
-    items.sort((a,b)=>sort.value==='supplier'?names[a.supplier].localeCompare(names[b.supplier]):Number(a.price===null)-Number(b.price===null)||((a.price??0)-(b.price??0)));
+    let items=Object.values(sourceState).flatMap(s=>s.status==='ok'?s.items:[]).filter(r=>(source.value==='all'||source.value===r.supplier)&&(tech.value==='all'||(tech.value==='unknown'?r.technology===null:tech.value===r.technology))&&(origin.value==='all'||origin.value===r.origin)&&(condition.value==='all'||condition.value===r.condition)&&(maxPrice.value===''||r.price!==null&&r.price<=Number(maxPrice.value))&&(!stock.checked||r.stock==='in')&&(!local.checked||r.is_local&&r.stock==='in'));
+    const priority=r=>r.is_local&&r.stock==='in'?0:r.stock==='in'?1:r.stock==='out'?3:2;
+    items.sort((a,b)=>(sort.value==='supplier'?names[a.supplier].localeCompare(names[b.supplier]):sort.value==='local'?priority(a)-priority(b):0)||Number(a.price===null)-Number(b.price===null)||((a.price??0)-(b.price??0)));
     const busy=Object.values(sourceState).some(s=>s.status==='loading');
     document.getElementById('result-count').textContent=`Предложений: ${items.length}${busy?' · поиск продолжается':''}`;
     results.replaceChildren();
-    if(!items.length) results.append(element('div',busy?'Получаем данные с сайтов поставщиков…':local.checked?'В полученных предложениях нет подтверждённого склада в Комсомольске-на-Амуре.':run?'По выбранным условиям предложения не найдены. Попробуйте изменить запрос или фильтры.':'Результаты появятся здесь после поиска.','empty'));
+    if(!items.length) results.append(element('div',busy?'Получаем данные с сайтов поставщиков…':local.checked?'В полученных предложениях нет подтверждённого наличия в Комсомольске-на-Амуре. Снимите этот фильтр, чтобы посмотреть другие склады.':run?'По выбранным условиям предложения не найдены. Попробуйте изменить запрос или фильтры.':'Результаты появятся здесь после поиска.','empty'));
     items.forEach(r=>{
       const card=element('article',undefined,'offer');const supplier=element('div',undefined,'supplier');supplier.append(element('b',names[r.supplier]),element('span',r.sku));card.append(supplier,element('h3',r.name));
+      if(r.is_local&&r.stock==='in'){card.classList.add('local-offer');card.append(element('div','В наличии в Комсомольске','local-badge'));}
       const tags=element('div',undefined,'tags');[r.technology,labels[r.origin],labels[r.condition]].filter(Boolean).forEach(t=>tags.append(element('span',t,'tag')));card.append(tags);
       card.append(element('div',({in:'В наличии',out:'Нет в наличии',order:'Под заказ / ожидается',unknown:'Наличие уточняется'})[r.stock]??'Уточнить наличие','stock '+r.stock),element('div',r.warehouse??'Склад не указан','warehouse'));
       const p=element('div',undefined,'money');p.append(element('b',r.price===null?'Цена уточняется':money(r.price)),element('span','цена детали'));card.append(p);
